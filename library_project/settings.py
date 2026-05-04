@@ -56,8 +56,15 @@ WSGI_APPLICATION = 'library_project.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'mssql',
+        'NAME': 'LibraryGIS_DB', # Tên database bạn vừa tạo ở Bước 1
+        'HOST': 'localhost\SQLEXPRESS',     # Hoặc copy "Server Name" lúc bạn đăng nhập vào SSMS (VD: DESKTOP-XXX\SQLEXPRESS)
+        'USER': '',              # Để trống nếu bạn đăng nhập SSMS bằng Windows Authentication
+        'PASSWORD': '',          # Để trống nếu dùng Windows Authentication
+        'OPTIONS': {
+            'driver': 'ODBC Driver 17 for SQL Server', # Đảm bảo máy bạn đã cài ODBC Driver (thường có sẵn khi cài SSMS)
+            'extra_params': 'TrustServerCertificate=yes;',
+        },
     }
 }
 

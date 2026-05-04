@@ -86,4 +86,25 @@ urlpatterns = [
     path('test-email/', views.test_email),
     path('preview/404/', views.preview_404, name='preview_404'),
     path('preview/403/', views.preview_403, name='preview_403'),
+    
+    # Trang chủ tự động vào Dashboard
+    path('', views.dashboard, name='home'), 
+    
+    # Dashboard & Thống kê
+    path('my-admin/', views.dashboard, name='dashboard'),
+    
+    # Quản lý Thư viện & GIS (Khớp với views.py của bạn)
+    path('my-admin/map/', views.library_map, name='library_map'),
+    path('my-admin/libraries/create/', views.library_create, name='library_create'),
+    path('my-admin/branches/create/', views.branch_create, name='branch_create'),
+    
+    # Quản lý Sách
+    path('my-admin/books/', views.book_list, name='book_list'),
+    path('my-admin/books/<int:pk>/', views.book_detail, name='book_detail'),
+    
+    # Độc giả & Mượn trả
+    path('my-admin/readers/', views.reader_list, name='reader_list'),
+    path('my-admin/borrows/', views.borrow_list, name='borrow_list'),
+    path('my-admin/fines/', views.fine_list, name='fine_list'),
 ]
+

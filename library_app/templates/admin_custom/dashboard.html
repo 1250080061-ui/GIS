@@ -1,0 +1,48 @@
+{% extends 'admin_custom/base.html' %}
+
+{% block content %}
+<div class="container-fluid">
+    <h2 class="mb-4">Tổng quan hệ thống</h2>
+    
+    <div class="row">
+        <div class="col-md-3">
+            <div class="card card-stat bg-primary text-white p-3">
+                <h5>Tổng thư viện</h5>
+                <h3>{{ total_libraries }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat bg-success text-white p-3">
+                <h5>Đầu sách trong kho</h5>
+                <h3>{{ total_books }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat bg-warning text-dark p-3">
+                <h5>Đang mượn</h5>
+                <h3>{{ active_loans }}</h3>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-stat bg-danger text-white p-3">
+                <h5>Phiếu phạt</h5>
+                <h3>{{ total_fines }}</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-5">
+        <div class="col-md-8">
+            <div class="card p-4">
+                <h5>Bản đồ mạng lưới thư viện</h5>
+                <div id="map" style="height: 400px; background: #eee;"></div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card p-4">
+                <h5>Hành động nhanh</h5>
+                <a href="{% url 'add_library' %}" class="btn btn-outline-primary mb-2">+ Thêm thư viện mới</a> <a href="{% url 'import_books' %}" class="btn btn-outline-success mb-2">+ Nhập sách ISBN</a> </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
