@@ -1,0 +1,22 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}Xác nhận xóa{% endblock %}
+{% block topbar_actions %}<a href="javascript:history.back()" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>{% endblock %}
+{% block content %}
+<div style="max-width:500px;margin:0 auto">
+  <div class="card danger-card">
+    <div class="card-head" style="background:#fff0f0;border-color:#fecaca">
+      <span class="card-title text-danger"><i class="ph ph-warning"></i> Xác nhận xóa</span>
+    </div>
+    <div class="card-body">
+      <p style="font-size:14px;color:var(--text);margin-bottom:20px">
+        Bạn có chắc muốn xóa <strong>{{ obj_name }}</strong>? Hành động này không thể hoàn tác.
+      </p>
+      <form method="post" class="flex-gap">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger"><i class="ph ph-trash"></i> Xóa</button>
+        <a href="javascript:history.back()" class="btn btn-ghost">Hủy</a>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

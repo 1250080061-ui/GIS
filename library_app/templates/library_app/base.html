@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LibraryGIS{% endblock %}</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="{% static 'library_app/css/main.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body>
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-wrap">
+        <div class="logo-icon">📚</div>
+        <div>
+          <h1>LibraryGIS</h1>
+          <p>Quản lý thư viện</p>
+        </div>
+      </div>
+    </div>
+
+    <nav>
+      {% if request.user.is_staff %}
+      <div class="nav-label">Tổng quan</div>
+      <a href="{% url 'dashboard' %}" class="nav-a {% block n_dash %}{% endblock %}">
+        <i class="ph ph-squares-four"></i> Dashboard
+      </a>
+
+      <a href="{% url 'book_bulk_import' %}" class="nav-a">
+        <i class="ph ph-download-simple"></i> Nhập sách hàng loạt
+      </a>
+
+      <a href="{% url 'about_page' %}" class="nav-a">
+        <i class="ph ph-info"></i> Giới thiệu
+      </a>
+
+      
+
+      <div class="nav-label">Nghiệp vụ</div>
+      <a href="{% url 'book_list' %}" class="nav-a {% block n_user_book %}{% endblock %}">
+        <i class="ph ph-books"></i> Kho sách
+      </a>
+      <li>
+        <a href="{% url 'books_excel' %}"
+          class="nav-a {% block n_books_excel %}{% endblock %}">
+         <i class="ph ph-file-xls"></i> Nhập/Xuất Excel
+        </a>
+      </li>
+      <a href="{% url 'reader_list' %}" class="nav-a {% block n_reader %}{% endblock %}">
+        <i class="ph ph-identification-card"></i> Độc giả
+      </a>
+      <a href="{% url 'borrow_list' %}" class="nav-a {% block n_borrow %}{% endblock %}">
+        <i class="ph ph-arrow-left-right"></i> Mượn / Trả sách
+      </a>
+      <a href="{% url 'reservation_list' %}" class="nav-a {% block n_reservation %}{% endblock %}">
+        <i class="ph ph-bookmark-simple"></i> Đặt trước
+      </a>
+
+      <div class="nav-label">Tài chính</div>
+      <a href="{% url 'fine_list' %}" class="nav-a {% block n_fine %}{% endblock %}">
+        <i class="ph ph-currency-circle-dollar"></i> Phí phạt
+      </a>
+
+      <div class="nav-label">Phân tích</div>
+      <a href="{% url 'report_overview' %}" class="nav-a {% block n_report %}{% endblock %}">
+        <i class="ph ph-chart-bar-horizontal"></i> Báo cáo & Thống kê
+      </a>
+      <a href="{% url 'notification_list' %}" class="nav-a {% block n_user_notif %}{% endblock %}">
+        <i class="ph ph-bell"></i> Thông báo
+      </a>
+      <a href="{% url 'library_map' %}" class="nav-a {% block n_user_library_map %}{% endblock %}">
+        <i class="ph ph-map-trifold"></i> Thư viện toàn quốc
+      </a>
+
+      <div class="nav-label">Xuất dữ liệu</div>
+      <a href="{% url 'export_center' %}" class="nav-a {% block n_export %}{% endblock %}">
+        <i class="ph ph-file-arrow-down"></i> Xuất dữ liệu
+      </a>
+
+      <div class="nav-label">Hệ thống</div>
+      <a href="{% url 'user_list' %}" class="nav-a {% block n_user_mgmt %}{% endblock %}">
+        <i class="ph ph-users-three"></i> Quản lý tài khoản
+      </a>
+      <a href="/admin/" class="nav-a">
+        <i class="ph ph-gear-six"></i> Django Admin
+      </a>
+      {% else %}
+      <div class="nav-label">Tra cứu</div>
+      <a href="{% url 'book_list' %}" class="nav-a {% block n_book %}{% endblock %}">
+        <i class="ph ph-books"></i> Tra cứu sách
+      </a>
+      <a href="{% url 'library_map' %}" class="nav-a {% if request.path == '/libraries/map/' %}active{% endif %}">
+        <i class="ph ph-map-trifold"></i> Thư viện toàn quốc
+      </a>
+
+      <div class="nav-label">Cá nhân</div>
+      <a href="{% url 'my_borrows' %}" class="nav-a {% block n_my_borrows %}{% endblock %}">
+        <i class="ph ph-book-open"></i> Lịch sử mượn
+      </a>
+      <a href="{% url 'my_reservations' %}" class="nav-a {% block n_my_reservations %}{% endblock %}">
+        <i class="ph ph-bookmark-simple"></i> Đặt trước của tôi
+      </a>
+      <a href="{% url 'notification_list' %}" class="nav-a {% if request.path == '/notifications/' %}active{% endif %}">
+        <i class="ph ph-bell"></i> Thông báo của tôi
+      </a>
+      <a href="{% url 'my_profile' %}" class="nav-a {% block n_my_profile %}{% endblock %}">
+        <i class="ph ph-user"></i> Hồ sơ của tôi
+      </a>
+      {% endif %}
+
+      <form action="{% url 'logout' %}" method="post" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="nav-a logout-btn">
+          <i class="ph ph-sign-out"></i>
+          <span>Đăng xuất</span>
+        </button>
+      </form>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="user-row">
+        <div class="avatar">{{ request.user.username|first|upper }}</div>
+        <div>
+          <div class="user-name">{{ request.user.username }}</div>
+          <div class="user-role">
+            {% if request.user.is_superuser %}
+            Quản trị viên
+            {% elif request.user.is_staff %}
+            Thủ thư
+            {% else %}
+            Người dùng
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h2 class="topbar-title">{% block page_title %}{% endblock %}</h2>
+      </div>
+      <div class="topbar-right">
+        {% block topbar_actions %}{% endblock %}
+        <a href="{% url 'notification_list' %}" class="btn btn-ghost btn-icon" title="Thông báo">
+          <i class="ph ph-bell" style="font-size:18px"></i>
+        </a>
+      </div>
+    </header>
+
+    <div class="page">
+      {% if messages %}
+      <div class="messages">
+        {% for m in messages %}
+        <div class="alert alert-{{ m.tags }}">
+          <i class="ph ph-info"></i> {{ m }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <script src="{% static 'library_app/js/charts.js' %}"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+
+</html>

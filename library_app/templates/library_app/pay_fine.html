@@ -1,0 +1,56 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Thu phí phạt · LibraryGIS{% endblock %}
+{% block n_fine %}active{% endblock %}
+{% block page_title %}Thu phí phạt{% endblock %}
+{% block topbar_actions %}<a href="{% url 'fine_list' %}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto">
+  <div class="card" style="padding:28px">
+    <h2 style="font-family:var(--font-serif);font-size:22px;margin-bottom:20px;color:var(--gold)">💰 Thu phí phạt</h2>
+
+    <div style="background:var(--bg3);border-radius:9px;padding:18px;margin-bottom:22px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div>
+        <div class="text-dim" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Độc giả</div>
+        <div style="font-weight:600">{{ borrow.reader.full_name }}</div>
+        <div class="mono text-muted" style="font-size:12px">{{ borrow.reader.card_number }}</div>
+      </div>
+      <div>
+        <div class="text-dim" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Sách</div>
+        <div style="font-weight:500">{{ borrow.book.title|truncatechars:40 }}</div>
+      </div>
+      <div>
+        <div class="text-dim" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Hạn trả</div>
+        <div class="text-red mono">{{ borrow.due_date|date:"d/m/Y" }}</div>
+      </div>
+      <div>
+        <div class="text-dim" style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Ngày trả TT</div>
+        <div class="mono">{{ borrow.return_date|date:"d/m/Y"|default:"—" }}</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(240,192,64,.08);border:1px solid rgba(240,192,64,.2);border-radius:9px;padding:16px;margin-bottom:22px;text-align:center">
+      <div class="text-dim" style="font-size:12px;margin-bottom:4px">Số tiền phải thu</div>
+      <div style="font-size:36px;font-weight:700;color:var(--gold);font-family:var(--font-serif)">{{ borrow.fine_amount|floatformat:0 }}đ</div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label class="form-label">Hình thức thanh toán</label>
+        {{ form.method }}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi chú</label>
+        {{ form.note }}
+      </div>
+      <div class="flex-gap" style="margin-top:24px">
+        <button type="submit" class="btn btn-primary" style="padding:11px 28px">
+          <i class="ph ph-check-circle"></i> Xác nhận thu tiền
+        </button>
+        <a href="{% url 'fine_list' %}" class="btn btn-ghost">Hủy</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,195 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Dashboard — LibraryGIS{% endblock %}
+{% block n_dash %}active{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'borrow_create' %}" class="btn btn-primary">
+  <i class="ph ph-plus"></i> Tạo phiếu mượn
+</a>
+<a href="{% url 'reader_create' %}" class="btn btn-ghost">
+  <i class="ph ph-user-plus"></i> Cấp thẻ mới
+</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats Row -->
+<div class="stats-grid" style="grid-template-columns:repeat(6,1fr)">
+  <div class="stat blue">
+    <div class="stat-icon"><i class="ph ph-books"></i></div>
+    <div class="stat-val">{{ stats.total_books }}</div>
+    <div class="stat-label">Tổng đầu sách</div>
+  </div>
+  <div class="stat sky">
+    <div class="stat-icon"><i class="ph ph-identification-card"></i></div>
+    <div class="stat-val">{{ stats.total_readers }}</div>
+    <div class="stat-label">Độc giả đang hoạt động</div>
+  </div>
+  <div class="stat green">
+    <div class="stat-icon"><i class="ph ph-arrow-down-left"></i></div>
+    <div class="stat-val">{{ stats.borrowed_today }}</div>
+    <div class="stat-label">Mượn hôm nay</div>
+  </div>
+  <div class="stat teal">
+    <div class="stat-icon"><i class="ph ph-arrow-up-right"></i></div>
+    <div class="stat-val">{{ stats.returned_today }}</div>
+    <div class="stat-label">Trả hôm nay</div>
+  </div>
+  <div class="stat red">
+    <div class="stat-icon"><i class="ph ph-warning-circle"></i></div>
+    <div class="stat-val">{{ stats.overdue_count }}</div>
+    <div class="stat-label">Đang quá hạn</div>
+  </div>
+  <div class="stat orange">
+    <div class="stat-icon"><i class="ph ph-currency-circle-dollar"></i></div>
+    <div class="stat-val" style="font-size:20px">{{ stats.total_fine_unpaid|floatformat:0 }}đ</div>
+    <div class="stat-label">Phạt chưa thu</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="grid-2 mb-24">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="ph ph-chart-line-up" style="color:var(--primary)"></i> Xu hướng mượn/trả 12 tháng</span>
+    </div>
+    <div style="padding:20px"><canvas id="trendChart" height="180"></canvas></div>
+  </div>
+  <div class="grid-2" style="gap:16px">
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="ph ph-chart-pie" style="color:var(--primary)"></i> Danh mục sách</span></div>
+      <div style="padding:16px"><canvas id="catChart" height="210"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span class="card-title"><i class="ph ph-chart-bar" style="color:var(--primary)"></i> Theo chi nhánh</span></div>
+      <div style="padding:16px"><canvas id="branchChart" height="210"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tables -->
+<div class="grid-2 mb-24">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="ph ph-fire" style="color:var(--orange)"></i> Sách được mượn nhiều nhất</span>
+      <a href="{% url 'book_list' %}" class="btn btn-ghost btn-sm">Xem tất cả</a>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>Tên sách</th><th>Tác giả</th><th>Lượt mượn</th></tr></thead>
+      <tbody>
+        {% for b in popular_books %}
+        <tr>
+          <td class="text-dim text-xs">{{ forloop.counter }}</td>
+          <td><a href="{% url 'book_detail' b.pk %}" class="text-primary fw-500" style="text-decoration:none">{{ b.title|truncatechars:36 }}</a></td>
+          <td class="text-muted">{{ b.author }}</td>
+          <td><span class="badge badge-blue">{{ b.borrow_count }}</span></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4"><div class="empty-state"><i class="ph ph-books empty-state-icon"></i><div class="empty-state-title">Chưa có dữ liệu</div></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="ph ph-clock-clockwise" style="color:var(--primary)"></i> Phiếu mượn gần đây</span>
+      <a href="{% url 'borrow_list' %}" class="btn btn-ghost btn-sm">Tất cả</a>
+    </div>
+    <table>
+      <thead><tr><th>Độc giả</th><th>Sách</th><th>Hạn trả</th><th>TT</th></tr></thead>
+      <tbody>
+        {% for b in recent_borrows %}
+        <tr>
+          <td class="fw-500">{{ b.reader.full_name }}</td>
+          <td class="text-muted">{{ b.book.title|truncatechars:22 }}</td>
+          <td class="mono">{{ b.due_date|date:"d/m/Y" }}</td>
+          <td>
+            {% if b.status == 'borrowed' %}<span class="badge badge-info">Đang mượn</span>
+            {% elif b.status == 'returned' %}<span class="badge badge-success">Đã trả</span>
+            {% elif b.status == 'overdue' %}<span class="badge badge-danger">Quá hạn</span>
+            {% else %}<span class="badge badge-muted">{{ b.status }}</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-muted" style="padding:30px">Chưa có phiếu mượn</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Overdue + Notifications -->
+<div class="grid-2">
+  <div class="card" style="border-color:#fecaca">
+    <div class="card-head" style="background:#fff0f0;border-color:#fecaca">
+      <span class="card-title text-danger"><i class="ph ph-warning"></i> Phiếu quá hạn cần xử lý</span>
+      <a href="{% url 'borrow_list' %}?status=overdue" class="btn btn-danger btn-sm">Xem tất cả</a>
+    </div>
+    <table>
+      <thead><tr><th>Độc giả</th><th>Sách</th><th>Hạn trả</th><th></th></tr></thead>
+      <tbody>
+        {% for b in overdue_list %}
+        <tr>
+          <td>
+            <a href="{% url 'reader_detail' b.reader.pk %}" style="text-decoration:none;color:var(--text);font-weight:500">{{ b.reader.full_name }}</a>
+            <div class="mono text-dim">{{ b.reader.card_number }}</div>
+          </td>
+          <td class="text-muted">{{ b.book.title|truncatechars:24 }}</td>
+          <td class="mono text-danger fw-500">{{ b.due_date|date:"d/m/Y" }}</td>
+          <td><a href="{% url 'return_book' b.pk %}" class="btn btn-sm btn-ghost">Trả sách</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" class="text-center text-success" style="padding:28px">
+          <i class="ph ph-check-circle" style="font-size:24px;display:block;margin-bottom:6px"></i>
+          Không có phiếu quá hạn
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="ph ph-bell-ringing" style="color:var(--orange)"></i> Thông báo chưa đọc</span>
+      <div class="flex-gap">
+        <a href="{% url 'notification_mark_all_read' %}" class="btn btn-ghost btn-sm">Đọc hết</a>
+        <a href="{% url 'notification_list' %}" class="btn btn-ghost btn-sm">Tất cả</a>
+      </div>
+    </div>
+    {% for n in notifications %}
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start">
+      <div style="width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;
+        {% if n.type == 'overdue' %}background:#fff0f0{% elif n.type == 'due_soon' %}background:#fffbeb{% elif n.type == 'fine' %}background:#eff6ff{% else %}background:var(--primary-bg){% endif %}">
+        {% if n.type == 'overdue' %}<i class="ph ph-warning-circle" style="color:var(--red)"></i>
+        {% elif n.type == 'due_soon' %}<i class="ph ph-clock" style="color:var(--orange)"></i>
+        {% elif n.type == 'fine' %}<i class="ph ph-currency-circle-dollar" style="color:var(--primary)"></i>
+        {% else %}<i class="ph ph-bell" style="color:var(--sky)"></i>{% endif %}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:13px;color:var(--text)">{{ n.title|truncatechars:48 }}</div>
+        <div class="text-dim text-xs mt-4">{{ n.created_at|date:"d/m/Y H:i" }}</div>
+      </div>
+      <a href="{% url 'notification_mark_read' n.pk %}" class="btn btn-ghost btn-sm" style="flex-shrink:0" title="Đánh dấu đã đọc">✓</a>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+      <span class="empty-state-icon"><i class="ph ph-bell-slash"></i></span>
+      <div class="empty-state-title">Không có thông báo mới</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const monthlyData = {{ monthly_data|safe }};
+const catData     = {{ cat_data|safe }};
+const branchStats = [{% for b in branch_stats %}{"name":"{{ b.name|truncatechars:14 }}","books":{{ b.book_count }},"borrows":{{ b.borrow_count }}}{% if not forloop.last %},{% endif %}{% endfor %}];
+makeTrendChart('trendChart', monthlyData);
+makeCategoryChart('catChart', catData);
+makeBranchChart('branchChart', branchStats);
+</script>
+{% endblock %}

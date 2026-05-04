@@ -1,0 +1,369 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block n_book %}active{% endblock %}
+
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">
+        <i class="ph ph-books" style="color:var(--primary)"></i> {{ title }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      <!-- TÌM KIẾM GOOGLE BOOKS -->
+      <div
+        style="background:var(--primary-bg);border:1px solid var(--primary);border-radius:8px;padding:16px;margin-bottom:24px">
+        <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:10px">
+          <i class="ph ph-magnifying-glass"></i> Tự động điền từ Google Books
+        </div>
+
+        <div style="display:flex;gap:8px">
+          <input type="text" id="isbn-search" class="form-control"
+            placeholder="Nhập ISBN (VD: 9780062315007) hoặc tên sách..." style="flex:1">
+          <button type="button" class="btn btn-primary" id="btn-search-isbn">
+            <i class="ph ph-magnifying-glass"></i> Tìm
+          </button>
+        </div>
+
+        <div id="search-status" style="font-size:12px;margin-top:8px;color:var(--text2)"></div>
+        <div id="search-results" style="display:none;margin-top:12px;flex-direction:column;gap:8px"></div>
+      </div>
+
+      <!-- FORM -->
+      <form method="post" enctype="multipart/form-data" id="book-form">
+        {% if form.errors %}
+        <div class="alert alert-danger" style="margin-bottom:16px;">
+          <strong>Form đang lỗi:</strong>
+          <pre style="white-space:pre-wrap;margin:8px 0 0;">{{ form.errors }}</pre>
+        </div>
+        {% endif %}
+        {% csrf_token %}
+
+        <!-- Preview ảnh bìa từ Google Books -->
+        <div id="cover-preview" style="display:none;margin-bottom:20px;text-align:center">
+          <img id="cover-img" src="" alt="Ảnh bìa"
+            style="max-height:200px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15)">
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">Ảnh bìa từ Google Books</div>
+        </div>
+
+        <input type="hidden" id="cover-url" name="cover_url" value="">
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">ISBN <span class="form-req">*</span></label>
+            <input type="text" name="isbn" id="id_isbn" value="{{ form.isbn.value|default:'' }}" class="form-control"
+              placeholder="9781234567890" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tên sách <span class="form-req">*</span></label>
+            <input type="text" name="title" id="id_title" value="{{ form.title.value|default:'' }}" class="form-control"
+              required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tác giả <span class="form-req">*</span></label>
+            <input type="text" name="author" id="id_author" value="{{ form.author.value|default:'' }}"
+              class="form-control" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nhà xuất bản</label>
+            <input type="text" name="publisher" id="id_publisher" value="{{ form.publisher.value|default:'' }}"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Năm xuất bản</label>
+            <input type="number" name="publish_year" id="id_publish_year"
+              value="{{ form.publish_year.value|default:'' }}" class="form-control" placeholder="2024">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Danh mục</label>
+            {{ form.category }}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Số trang</label>
+            <input type="number" name="pages" id="id_pages" value="{{ form.pages.value|default:'' }}"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Ngôn ngữ</label>
+            <input type="text" name="language" id="id_language" value="{{ form.language.value|default:'Tiếng Việt' }}"
+              class="form-control">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Tổng số bản <span class="form-req">*</span></label>
+            <input type="number" name="total_copies" id="id_total_copies"
+              value="{{ form.total_copies.value|default:'1' }}" class="form-control" min="1" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Số bản có sẵn <span class="form-req">*</span></label>
+            <input type="number" name="available_copies" id="id_available_copies"
+              value="{{ form.available_copies.value|default:'1' }}" class="form-control" min="0" required>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Mô tả</label>
+            <textarea name="description" id="id_description" class="form-control"
+              rows="4">{{ form.description.value|default:'' }}</textarea>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Ảnh bìa (upload file)</label>
+            <input type="file" name="cover_image" class="form-control" accept="image/*">
+            <div class="form-help">Hoặc dùng tính năng tìm Google Books bên trên để lấy ảnh tự động</div>
+          </div>
+
+          <div class="form-group full">
+            <label class="form-label">Ảnh bìa hiện tại</label>
+            {% if book and book.cover_image %}
+            <div class="preview-card">
+              <img src="{{ book.cover_image.url }}" alt="Ảnh bìa" class="preview-cover">
+            </div>
+            {% else %}
+            <div class="text-muted">Chưa có ảnh bìa</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="form-group full">
+          <label class="form-label">Trang xem trước</label>
+          <input type="file" name="preview_pages" multiple accept="image/*" class="form-control">
+          <div class="form-help">Có thể chọn nhiều ảnh cùng lúc. Hệ thống sẽ lấy tối đa 4 ảnh đầu tiên.</div>
+        </div>
+
+        <div class="form-grid" style="margin-top:16px">
+          <div class="form-group">
+            <label class="form-label">Preview 1 hiện tại</label>
+            {% if book and book.preview_page_1 %}
+            <div class="preview-card mt-8">
+              <img src="{{ book.preview_page_1.url }}" alt="Preview 1" class="preview-page">
+            </div>
+            {% else %}
+            <div class="text-muted">Chưa có ảnh</div>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preview 2 hiện tại</label>
+            {% if book and book.preview_page_2 %}
+            <div class="preview-card mt-8">
+              <img src="{{ book.preview_page_2.url }}" alt="Preview 2" class="preview-page">
+            </div>
+            {% else %}
+            <div class="text-muted">Chưa có ảnh</div>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preview 3 hiện tại</label>
+            {% if book and book.preview_page_3 %}
+            <div class="preview-card mt-8">
+              <img src="{{ book.preview_page_3.url }}" alt="Preview 3" class="preview-page">
+            </div>
+            {% else %}
+            <div class="text-muted">Chưa có ảnh</div>
+            {% endif %}
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Preview 4 hiện tại</label>
+            {% if book and book.preview_page_4 %}
+            <div class="preview-card mt-8">
+              <img src="{{ book.preview_page_4.url }}" alt="Preview 4" class="preview-page">
+            </div>
+            {% else %}
+            <div class="text-muted">Chưa có ảnh</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="flex-gap" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="ph ph-floppy-disk"></i> Lưu sách
+          </button>
+          <a href="javascript:history.back()" class="btn btn-ghost btn-lg">Hủy</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .preview-card {
+    margin-top: 8px;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .preview-cover {
+    width: 110px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .preview-page {
+    width: 140px;
+    height: 190px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  .mt-8 {
+    margin-top: 8px;
+  }
+
+  input[type="file"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    font-size: 14px;
+  }
+</style>
+
+<script>
+  const searchBtn = document.getElementById('btn-search-isbn');
+  const searchInput = document.getElementById('isbn-search');
+  const statusEl = document.getElementById('search-status');
+  const resultsEl = document.getElementById('search-results');
+
+  function fillForm(book) {
+    document.getElementById('id_isbn').value = book.isbn || '';
+    document.getElementById('id_title').value = book.title || '';
+    document.getElementById('id_author').value = book.author || '';
+    document.getElementById('id_publisher').value = book.publisher || '';
+    document.getElementById('id_publish_year').value = book.year || '';
+    document.getElementById('id_pages').value = book.pages || '';
+    document.getElementById('id_description').value = book.description || '';
+
+    if (book.language) {
+      document.getElementById('id_language').value = book.language;
+    }
+
+    if (book.cover) {
+      document.getElementById('cover-img').src = book.cover;
+      document.getElementById('cover-preview').style.display = 'block';
+      document.getElementById('cover-url').value = book.cover;
+    }
+
+    statusEl.innerHTML = '<span style="color:var(--green)">✅ Đã điền thông tin!</span>';
+    resultsEl.style.display = 'none';
+  }
+
+  function searchGoogleBooks(query) {
+    statusEl.innerHTML = '<i class="ph ph-spinner"></i> Đang tìm kiếm...';
+    resultsEl.style.display = 'none';
+
+    const isISBN = /^[0-9]{10,13}$/.test(query.replace(/-/g, ''));
+    const searchQ = isISBN ? `isbn:${query}` : query;
+    const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQ)}&maxResults=5&langRestrict=`;
+
+    fetch(url)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.items || data.items.length === 0) {
+          statusEl.innerHTML = '<span style="color:var(--red)">❌ Không tìm thấy sách. Thử tên khác.</span>';
+          return;
+        }
+
+        const books = data.items.map(item => {
+          const info = item.volumeInfo;
+          const isbn = (info.industryIdentifiers || []).find(
+            x => x.type === 'ISBN_13' || x.type === 'ISBN_10'
+          );
+
+          return {
+            isbn: isbn ? isbn.identifier : '',
+            title: info.title || '',
+            author: (info.authors || []).join(', '),
+            publisher: info.publisher || '',
+            year: info.publishedDate ? info.publishedDate.substring(0, 4) : '',
+            pages: info.pageCount || '',
+            description: info.description ? info.description.substring(0, 500) : '',
+            cover: info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : '',
+            language: info.language === 'vi' ? 'Tiếng Việt' : info.language === 'en' ? 'Tiếng Anh' : info.language || '',
+          };
+        });
+
+        if (books.length === 1) {
+          fillForm(books[0]);
+          return;
+        }
+
+        statusEl.innerHTML = `<span style="color:var(--primary)">Tìm thấy ${books.length} kết quả, chọn sách phù hợp:</span>`;
+        resultsEl.style.display = 'flex';
+        resultsEl.innerHTML = books.map((b, i) => `
+        <div onclick="selectBook(${i})" style="
+          display:flex;gap:12px;align-items:center;
+          padding:10px 12px;border:1px solid var(--border);
+          border-radius:8px;cursor:pointer;background:var(--bg2);
+          transition:.15s;
+        " onmouseover="this.style.borderColor='var(--primary)'"
+           onmouseout="this.style.borderColor='var(--border)'">
+          ${b.cover
+            ? `<img src="${b.cover}" style="width:40px;height:56px;object-fit:cover;border-radius:4px;flex-shrink:0">`
+            : `<div style="width:40px;height:56px;background:var(--bg4);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:18px">📚</div>`
+          }
+          <div>
+            <div style="font-weight:600;font-size:13px">${b.title}</div>
+            <div style="font-size:12px;color:var(--text2)">${b.author} · ${b.year}</div>
+            <div style="font-size:11px;color:var(--text3)">${b.publisher}</div>
+          </div>
+        </div>
+      `).join('');
+
+        window._searchBooks = books;
+      })
+      .catch(() => {
+        statusEl.innerHTML = '<span style="color:var(--red)">❌ Lỗi kết nối. Kiểm tra internet.</span>';
+      });
+  }
+
+  function selectBook(i) {
+    fillForm(window._searchBooks[i]);
+  }
+
+  searchBtn.addEventListener('click', () => {
+    const q = searchInput.value.trim();
+    if (!q) return;
+    searchGoogleBooks(q);
+  });
+
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchBtn.click();
+    }
+  });
+
+  const existingISBN = document.getElementById('id_isbn').value;
+  if (existingISBN && !document.getElementById('id_title').value) {
+    searchInput.value = existingISBN;
+    searchGoogleBooks(existingISBN);
+  }
+</script>
+{% endblock %}

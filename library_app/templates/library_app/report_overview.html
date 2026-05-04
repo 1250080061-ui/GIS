@@ -1,0 +1,87 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Báo cáo — LibraryGIS{% endblock %}
+{% block n_report %}active{% endblock %}
+{% block page_title %}Báo cáo & Thống kê{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'export_borrows' %}" class="btn btn-ghost btn-sm"><i class="ph ph-file-csv"></i> Phiếu mượn</a>
+<a href="{% url 'export_readers' %}" class="btn btn-ghost btn-sm"><i class="ph ph-file-csv"></i> Độc giả</a>
+<a href="{% url 'export_books' %}" class="btn btn-primary btn-sm"><i class="ph ph-download-simple"></i> Xuất tất cả</a>
+{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-24">
+  <div class="stat blue"><div class="stat-icon"><i class="ph ph-currency-circle-dollar"></i></div>
+    <div class="stat-val" style="font-size:20px">{{ total_fine_collected|floatformat:0 }}đ</div><div class="stat-label">Đã thu phí phạt</div></div>
+  <div class="stat red"><div class="stat-icon"><i class="ph ph-warning"></i></div>
+    <div class="stat-val" style="font-size:20px">{{ total_fine_pending|floatformat:0 }}đ</div><div class="stat-label">Phí phạt chờ thu</div></div>
+  {% for label, count in aging.items %}
+  <div class="stat {% if forloop.first %}green{% elif forloop.counter == 2 %}orange{% else %}red{% endif %}">
+    <div class="stat-icon"><i class="ph ph-clock"></i></div>
+    <div class="stat-val">{{ count }}</div>
+    <div class="stat-label">QH {{ label }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="grid-2 mb-24">
+  <div class="card"><div class="card-head"><span class="card-title"><i class="ph ph-trend-up" style="color:var(--red)"></i> Phí phạt theo tháng</span></div>
+    <div style="padding:20px"><canvas id="fineChart" height="200"></canvas></div></div>
+  <div class="card"><div class="card-head"><span class="card-title"><i class="ph ph-chart-pie" style="color:var(--primary)"></i> Phân bổ quá hạn</span></div>
+    <div style="padding:20px"><canvas id="agingChart" height="200"></canvas></div></div>
+</div>
+
+<div class="card mb-24">
+  <div class="card-head"><span class="card-title"><i class="ph ph-calendar" style="color:var(--primary)"></i> Hoạt động 30 ngày gần nhất</span></div>
+  <div style="padding:20px"><canvas id="dailyChart" height="120"></canvas></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="ph ph-tag" style="color:var(--primary)"></i> Lượt mượn theo danh mục</span></div>
+    <table>
+      <thead><tr><th>#</th><th>Danh mục</th><th>Lượt mượn</th><th>Tỷ lệ</th></tr></thead>
+      <tbody>
+        {% for cat in cat_borrows %}
+        <tr>
+          <td class="text-dim text-xs">{{ forloop.counter }}</td>
+          <td><div class="flex-gap"><div style="width:10px;height:10px;border-radius:50%;background:{{ cat.color|default:'#1e6fbf' }}"></div>{{ cat.name }}</div></td>
+          <td><span class="badge badge-blue">{{ cat.cnt }}</span></td>
+          <td>
+            {% if cat_borrows.first.cnt %}
+            <div style="height:6px;background:var(--bg4);border-radius:3px;min-width:80px">
+              <div style="height:100%;background:{{ cat.color|default:'#1e6fbf' }};border-radius:3px;width:{% widthratio cat.cnt cat_borrows.first.cnt 100 %}%"></div>
+            </div>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="text-center text-muted" style="padding:30px">Chưa có dữ liệu</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="ph ph-trophy" style="color:var(--orange)"></i> Độc giả mượn nhiều nhất</span></div>
+    <table>
+      <thead><tr><th>#</th><th>Độc giả</th><th>Mã thẻ</th><th>Lượt</th></tr></thead>
+      <tbody>
+        {% for reader in top_readers %}
+        <tr>
+          <td>{% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}<span class="text-dim">{{ forloop.counter }}</span>{% endif %}</td>
+          <td><a href="{% url 'reader_detail' reader.pk %}" style="color:var(--text);text-decoration:none;font-weight:500">{{ reader.full_name }}</a></td>
+          <td class="mono text-muted">{{ reader.card_number }}</td>
+          <td><span class="badge badge-purple">{{ reader.cnt }}</span></td>
+        </tr>
+        {% empty %}<tr><td colspan="4" class="text-center text-muted" style="padding:30px">Chưa có dữ liệu</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+makeFineChart('fineChart', {{ fine_monthly|safe }});
+makeDailyChart('dailyChart', {{ daily_data|safe }});
+makeAgingChart('agingChart', {{ aging_labels|safe }}, {{ aging_json|safe }});
+</script>
+{% endblock %}

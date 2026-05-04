@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập — LibraryGIS</title>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0f4f8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:50vh;background:linear-gradient(135deg,#0f3460 0%,#1e6fbf 100%);z-index:0}
+.container{position:relative;z-index:1;width:100%;max-width:440px}
+.logo-area{text-align:center;margin-bottom:32px}
+.logo-icon{width:64px;height:64px;background:#1e6fbf;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(30,111,191,.4)}
+.logo-title{font-family:'Lora',serif;font-size:26px;font-weight:700;color:#fff;letter-spacing:.3px}
+.logo-sub{font-size:12px;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:1px;margin-top:4px}
+.card{background:#fff;border-radius:16px;padding:36px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.card h2{font-size:20px;font-weight:600;color:#1e293b;margin-bottom:6px}
+.card p{font-size:13px;color:#64748b;margin-bottom:28px}
+.error-box{background:#fff0f0;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;font-size:13px;color:#b91c1c;margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-size:13px;font-weight:500;color:#374151;margin-bottom:6px}
+.input-wrap{position:relative}
+.input-wrap i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:17px}
+input[type=text],input[type=password]{width:100%;padding:11px 14px 11px 40px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;color:#1e293b;background:#f8fafc;transition:.15s}
+input[type=text]:focus,input[type=password]:focus{outline:none;border-color:#1e6fbf;box-shadow:0 0 0 3px rgba(30,111,191,.12);background:#fff}
+.btn-login{width:100%;padding:13px;background:#1e6fbf;border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:600;font-family:'Inter',sans-serif;cursor:pointer;transition:.15s;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-login:hover{background:#155a9e;box-shadow:0 4px 12px rgba(30,111,191,.35);transform:translateY(-1px)}
+.btn-login:active{transform:translateY(0)}
+.divider{text-align:center;font-size:12px;color:#94a3b8;margin:20px 0;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:#e2e8f0}
+.divider::before{left:0}.divider::after{right:0}
+.demo-accounts{background:#f0f4f8;border-radius:8px;padding:14px 16px}
+.demo-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#94a3b8;margin-bottom:10px}
+.demo-item{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.demo-item:last-child{margin-bottom:0}
+.demo-label{font-size:12px;color:#64748b}
+.demo-cred{font-family:monospace;font-size:12px;color:#1e6fbf;background:#fff;padding:3px 8px;border-radius:5px;border:1px solid #e2e8f0;cursor:pointer;transition:.1s}
+.demo-cred:hover{background:#1e6fbf;color:#fff;border-color:#1e6fbf}
+.footer{text-align:center;margin-top:20px;font-size:12px;color:rgba(255,255,255,.5)}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo-area">
+    <div class="logo-icon">📚</div>
+    <div class="logo-title">LibraryGIS</div>
+    <div class="logo-sub">Hệ thống quản lý thư viện</div>
+  </div>
+
+  <div class="card">
+    <h2>Chào mừng trở lại</h2>
+    <p>Đăng nhập để tiếp tục quản lý thư viện</p>
+
+    {% if form.errors %}
+    <div class="error-box">
+      <i class="ph ph-warning-circle"></i>
+      Tên đăng nhập hoặc mật khẩu không đúng. Vui lòng thử lại.
+    </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+
+      <div class="form-group">
+        <label class="form-label" for="id_username">Tên đăng nhập</label>
+        <div class="input-wrap">
+          <i class="ph ph-user"></i>
+          <input type="text" name="username" id="id_username"
+                 placeholder="Nhập tên đăng nhập" autofocus required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="id_password">Mật khẩu</label>
+        <div class="input-wrap">
+          <i class="ph ph-lock"></i>
+          <input type="password" name="password" id="id_password"
+                 placeholder="Nhập mật khẩu" required>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login">
+        <i class="ph ph-sign-in"></i> Đăng nhập
+      </button>
+      <div class="text-center">
+       <a href="{% url 'register' %}">Chưa có tài khoản? Đăng ký ngay</a>
+      </div>
+      <div style="margin-top:12px;text-align:right;">
+        <a href="{% url 'password_reset' %}" class="text-link">Quên mật khẩu?</a>
+      </div>
+    </form>
+
+    <div class="divider">Tài khoản demo</div>
+
+    <div class="demo-accounts">
+      <div class="demo-title">Nhấn để sao chép</div>
+      <div class="demo-item">
+        <span class="demo-label">👑 Quản trị viên</span>
+        <span class="demo-cred" onclick="fillLogin('admin','admin123')">admin / admin123</span>
+      </div>
+      <div class="demo-item">
+        <span class="demo-label">📚 Thủ thư</span>
+        <span class="demo-cred" onclick="fillLogin('librarian','lib2024')">librarian / lib2024</span>
+      </div>
+    </div>
+  </div>
+  <div class="footer">© 2025 LibraryGIS · Hệ thống quản lý thư viện tích hợp GIS</div>
+</div>
+<script>
+function fillLogin(user, pass) {
+  document.getElementById('id_username').value = user;
+  document.getElementById('id_password').value = pass;
+  document.getElementById('id_username').focus();
+}
+</script>
+</body>
+</html>

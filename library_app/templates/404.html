@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>404 — Không tìm thấy trang | LibraryGIS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/@phosphor-icons/web@2.0.3"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:      #1e6fbf;
+      --primary-dark: #155a9e;
+      --sidebar-bg:   #0f3460;
+      --sidebar-dark: #0a2744;
+      --bg:           #f0f4f8;
+      --text:         #1e293b;
+      --text2:        #64748b;
+      --border:       #e2e8f0;
+      --radius:       12px;
+      --font:         'Inter', sans-serif;
+      --font-serif:   'Lora', serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative blobs */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -120px; left: -120px;
+      width: 420px; height: 420px;
+      background: radial-gradient(circle, rgba(30,111,191,.12) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -100px; right: -100px;
+      width: 380px; height: 380px;
+      background: radial-gradient(circle, rgba(15,52,96,.1) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(15,52,96,.12), 0 4px 16px rgba(0,0,0,.06);
+      max-width: 520px;
+      width: 100%;
+      overflow: hidden;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Top stripe */
+    .stripe {
+      height: 6px;
+      background: linear-gradient(90deg, var(--sidebar-dark) 0%, var(--primary) 60%, #60a5fa 100%);
+    }
+
+    .body {
+      padding: 52px 48px 44px;
+      text-align: center;
+    }
+
+    /* Icon circle */
+    .icon-wrap {
+      width: 96px;
+      height: 96px;
+      background: linear-gradient(135deg, #eef4fb 0%, #dbeafe 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 28px;
+      position: relative;
+    }
+    .icon-wrap i {
+      font-size: 44px;
+      color: var(--primary);
+    }
+    /* Floating dot decorations */
+    .icon-wrap::before {
+      content: '';
+      position: absolute;
+      width: 14px; height: 14px;
+      background: #bfdbfe;
+      border-radius: 50%;
+      top: 4px; right: 4px;
+      opacity: .7;
+    }
+    .icon-wrap::after {
+      content: '';
+      position: absolute;
+      width: 8px; height: 8px;
+      background: var(--primary);
+      border-radius: 50%;
+      bottom: 6px; left: 8px;
+      opacity: .4;
+    }
+
+    .code {
+      font-family: var(--font-serif);
+      font-size: 88px;
+      font-weight: 700;
+      line-height: 1;
+      color: transparent;
+      background: linear-gradient(135deg, var(--sidebar-bg) 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      margin-bottom: 8px;
+      letter-spacing: -2px;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .desc {
+      font-size: 14px;
+      color: var(--text2);
+      line-height: 1.65;
+      margin-bottom: 36px;
+      max-width: 340px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: .18s;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(30,111,191,.3);
+    }
+    .btn-primary:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(30,111,191,.35);
+    }
+    .btn-ghost {
+      background: var(--bg);
+      color: var(--text2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover {
+      background: #e9eef5;
+      color: var(--text);
+      transform: translateY(-1px);
+    }
+
+    /* Footer brand */
+    .brand {
+      margin-top: 40px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text2);
+      font-size: 12px;
+    }
+    .brand-icon {
+      width: 26px; height: 26px;
+      background: var(--sidebar-bg);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+    }
+    .brand strong {
+      font-family: var(--font-serif);
+      color: var(--sidebar-bg);
+      font-size: 13px;
+    }
+
+    /* Animated floating books */
+    .floats {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .float-item {
+      position: absolute;
+      font-size: 22px;
+      opacity: .06;
+      animation: floatUp linear infinite;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(110vh) rotate(0deg); }
+      100% { transform: translateY(-10vh) rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating background icons -->
+  <div class="floats">
+    <span class="float-item" style="left:8%;animation-duration:18s;animation-delay:0s">📚</span>
+    <span class="float-item" style="left:22%;animation-duration:24s;animation-delay:4s">📖</span>
+    <span class="float-item" style="left:38%;animation-duration:20s;animation-delay:8s">🔍</span>
+    <span class="float-item" style="left:55%;animation-duration:22s;animation-delay:2s">📚</span>
+    <span class="float-item" style="left:72%;animation-duration:16s;animation-delay:6s">📖</span>
+    <span class="float-item" style="left:88%;animation-duration:26s;animation-delay:10s">📚</span>
+  </div>
+
+  <div class="card">
+    <div class="stripe"></div>
+    <div class="body">
+
+      <div class="icon-wrap">
+        <i class="ph ph-map-trifold"></i>
+      </div>
+
+      <div class="code">404</div>
+      <div class="title">Không tìm thấy trang</div>
+      <p class="desc">
+        Trang bạn đang tìm kiếm không tồn tại, đã bị xóa hoặc địa chỉ URL không chính xác.
+      </p>
+
+      <div class="actions">
+        <a href="/" class="btn btn-primary">
+          <i class="ph ph-house"></i> Về trang chủ
+        </a>
+        <a href="javascript:history.back()" class="btn btn-ghost">
+          <i class="ph ph-arrow-left"></i> Quay lại
+        </a>
+      </div>
+
+      <div class="brand">
+        <div class="brand-icon">📚</div>
+        <span>Hệ thống <strong>LibraryGIS</strong> — Quản lý thư viện</span>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

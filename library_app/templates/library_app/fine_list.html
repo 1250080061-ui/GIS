@@ -1,0 +1,158 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Phí phạt · LibraryGIS{% endblock %}
+{% block n_fine %}active{% endblock %}
+{% block page_title %}Quản lý phí phạt{% endblock %}
+
+{% block content %}
+<div class="stats-grid mb-24" style="grid-template-columns:repeat(3,1fr)">
+  <div class="stat red"><div class="stat-icon"><i class="ph ph-currency-circle-dollar"></i></div>
+    <div class="stat-val" style="font-size:22px">{{ total_fine|floatformat:0 }}đ</div><div class="stat-label">Tổng phí phạt</div></div>
+  <div class="stat teal"><div class="stat-icon"><i class="ph ph-check-circle"></i></div>
+    <div class="stat-val" style="font-size:22px">{{ total_paid|floatformat:0 }}đ</div><div class="stat-label">Đã thu</div></div>
+  <div class="stat orange"><div class="stat-icon"><i class="ph ph-clock"></i></div>
+    <div class="stat-val" style="font-size:22px">{% widthratio total_fine 1 1 %}đ</div><div class="stat-label">Chưa thu (ước tính)</div></div>
+</div>
+
+<div class="search-bar">
+  <a href="?paid=" class="btn {% if paid_filter == '' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Tất cả</a>
+  <a href="?paid=0" class="btn {% if paid_filter == '0' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm"><i class="ph ph-clock"></i> Chưa thu</a>
+  <a href="?paid=1" class="btn {% if paid_filter == '1' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm"><i class="ph ph-check-circle"></i> Đã thu</a>
+</div>
+
+<div class="card mb-20">
+    <div class="card-body">
+        <form method="get" class="search-bar">
+            <div class="search-wrap">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" name="search" class="form-control"
+                       placeholder="Tìm độc giả, mã thẻ, tên sách..."
+                       value="{{ search|default:'' }}">
+            </div>
+
+            <select name="paid" class="form-control" style="max-width: 180px;">
+                <option value="">Tất cả trạng thái</option>
+                <option value="0" {% if paid_filter == '0' %}selected{% endif %}>Chưa thu</option>
+                <option value="1" {% if paid_filter == '1' %}selected{% endif %}>Đã thu</option>
+            </select>
+
+            <input type="date" name="date_from" class="form-control" value="{{ date_from|default:'' }}" style="max-width: 170px;">
+            <input type="date" name="date_to" class="form-control" value="{{ date_to|default:'' }}" style="max-width: 170px;">
+
+            <button type="submit" class="btn btn-primary">
+                <i class="ph ph-funnel"></i> Lọc
+            </button>
+
+            <a href="{% url 'fine_list' %}" class="btn btn-ghost">
+                <i class="ph ph-arrow-clockwise"></i> Làm mới
+            </a>
+
+            <a href="{% url 'export_fines_csv' %}" class="btn btn-secondary">
+                <i class="ph ph-file-csv"></i> Xuất CSV
+            </a>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-head">
+        <div class="card-title">
+            <i class="ph ph-currency-circle-dollar"></i> Danh sách phí phạt
+        </div>
+    </div>
+
+    <div class="card-body" style="padding:0;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Mã phiếu</th>
+                    <th>Độc giả</th>
+                    <th>Mã thẻ</th>
+                    <th>Sách</th>
+                    <th>Hạn trả</th>
+                    <th>Ngày trả TT</th>
+                    <th>Số ngày trễ</th>
+                    <th>Phí phạt</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in fines %}
+                <tr>
+                    <td>{{ item.borrow_code|stringformat:"s"|slice:":8"|upper }}</td>
+                    <td>{{ item.reader.full_name }}</td>
+                    <td>{{ item.reader.card_number }}</td>
+                    <td>{{ item.book.title }}</td>
+                    <td>{{ item.due_date|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if item.return_date %}
+                            {{ item.return_date|date:"d/m/Y" }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if item.return_date and item.return_date > item.due_date %}
+                            {{ item.return_date|timeuntil:item.due_date }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ item.fine_amount|floatformat:0 }}đ</td>
+                    <td>
+                        {% if item.payment %}
+                            <span class="badge badge-success">Đã thu</span>
+                        {% else %}
+                            <span class="badge badge-danger">Chưa thu</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex-gap">
+                            {% if not item.payment %}
+                                <a href="{% url 'pay_fine' item.pk %}" class="btn btn-sm btn-danger">
+                                    <i class="ph ph-credit-card"></i> Thu phạt
+                                </a>
+                            {% else %}
+                                <span class="badge badge-success">Đã thanh toán</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" class="text-center">
+                        <div class="empty-state">
+                            <span class="empty-state-icon">💸</span>
+                            <div class="empty-state-title">Không có phiếu phạt nào</div>
+                            <div class="empty-state-sub">Hiện chưa có khoản phạt nào cần xử lý.</div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="pagination">
+    <span class="step-links">
+        {% if fines.has_previous %}
+            <a href="?page=1&paid={{ paid_filter }}&search={{ search }}&date_from={{ date_from }}&date_to={{ date_to }}">Đầu tiên</a>
+            <a href="?page={{ fines.previous_page_number }}&paid={{ paid_filter }}&search={{ search }}&date_from={{ date_from }}&date_to={{ date_to }}">Trước</a>
+        {% endif %}
+
+        <span class="current">
+            Trang {{ fines.number }} của {{ fines.paginator.num_pages }}.
+        </span>
+
+        {% if fines.has_next %}
+            <a href="?page={{ fines.next_page_number }}&paid={{ paid_filter }}&search={{ search }}&date_from={{ date_from }}&date_to={{ date_to }}">Tiếp theo</a>
+            <a href="?page={{ fines.paginator.num_pages }}&paid={{ paid_filter }}&search={{ search }}&date_from={{ date_from }}&date_to={{ date_to }}">Cuối cùng</a>
+        {% endif %}
+    </span>
+</div>
+<div class="stat teal">
+    <div class="stat-icon"><i class="ph ph-receipt"></i></div>
+    <div class="stat-val">{{ total_records }}</div>
+    <div class="stat-label">Số phiếu bị phạt</div>
+</div>
+{% endblock %}

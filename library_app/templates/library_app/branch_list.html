@@ -1,0 +1,98 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Chi nhánh — LibraryGIS{% endblock %}
+{% block n_branch %}active{% endblock %}
+{% block page_title %}Chi nhánh & Bản đồ GIS{% endblock %}
+
+{% block extra_head %}
+<style>
+#main-map{height:460px;width:100%}
+.branch-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;transition:.2s;cursor:pointer;box-shadow:var(--shadow-sm)}
+.branch-card:hover{border-color:var(--primary);transform:translateY(-2px);box-shadow:var(--shadow)}
+.branch-card h3{font-size:15px;font-weight:600;color:var(--primary);margin-bottom:10px}
+.bm-item{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--text2);margin-bottom:6px}
+.bm-item i{color:var(--primary);font-size:15px;margin-top:1px;flex-shrink:0}
+</style>
+{% endblock %}
+
+{% block topbar_actions %}
+<button class="btn btn-ghost" id="btn-gps"><i class="ph ph-crosshair"></i> Chi nhánh gần tôi</button>
+<a href="/admin/library_app/branch/add/" class="btn btn-primary"><i class="ph ph-plus"></i> Thêm chi nhánh</a>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-24">
+  <div class="card-head">
+    <span class="card-title"><i class="ph ph-map-trifold" style="color:var(--primary)"></i> Bản đồ chi nhánh thư viện</span>
+    <div class="flex-gap">
+      <span class="text-muted text-sm">{{ branches|length }} chi nhánh</span>
+      <button class="btn btn-ghost btn-sm" id="btn-fit"><i class="ph ph-arrows-out"></i> Fit tất cả</button>
+    </div>
+  </div>
+  <div class="map-wrap"><div id="main-map"></div></div>
+</div>
+
+<div id="nearest-panel" style="display:none" class="card mb-24" style="border-color:#bfdbfe">
+  <div class="card-head" style="background:var(--primary-bg)">
+    <span class="card-title text-primary"><i class="ph ph-crosshair"></i> Chi nhánh gần bạn nhất</span>
+    <button onclick="document.getElementById('nearest-panel').style.display='none'" class="btn btn-ghost btn-sm">✕ Đóng</button>
+  </div>
+  <div id="nearest-list"></div>
+</div>
+
+<div class="page-header">
+  <div><div class="page-header-title">Danh sách chi nhánh</div></div>
+</div>
+
+<div class="grid-3">
+  {% for branch in branches %}
+  <div class="branch-card" onclick="focusBranch({{ branch.latitude }}, {{ branch.longitude }})">
+    <h3>{{ branch.name }}</h3>
+    <div class="bm-item"><i class="ph ph-map-pin"></i><span>{{ branch.address }}</span></div>
+    <div class="bm-item"><i class="ph ph-phone"></i><span>{{ branch.phone|default:"Chưa cập nhật" }}</span></div>
+    <div class="bm-item"><i class="ph ph-clock"></i><span>{{ branch.opening_hours }}</span></div>
+    <div style="display:flex;gap:12px;margin:10px 0">
+      <span class="badge badge-blue"><i class="ph ph-books"></i> {{ branch.book_count }} sách</span>
+      <span class="badge badge-info"><i class="ph ph-users"></i> {{ branch.reader_count }} độc giả</span>
+    </div>
+    <div class="flex-gap mt-8">
+      <a href="{% url 'branch_detail' branch.pk %}" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center"><i class="ph ph-eye"></i> Chi tiết</a>
+      <a href="{% url 'book_list' %}?branch={{ branch.pk }}" class="btn btn-primary btn-sm" style="flex:1;justify-content:center"><i class="ph ph-books"></i> Xem sách</a>
+    </div>
+  </div>
+  {% empty %}
+  <div style="grid-column:1/-1"><div class="empty-state"><span class="empty-state-icon">📍</span><div class="empty-state-title">Chưa có chi nhánh nào</div><a href="/admin/library_app/branch/add/" class="text-primary">Thêm chi nhánh đầu tiên →</a></div></div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const geojson = {{ branches_geojson|safe }};
+const map = initMap('main-map');
+const markers = addBranchMarkers(map, geojson);
+fitMarkers(map, markers);
+document.getElementById('btn-fit').addEventListener('click', () => fitMarkers(map, markers));
+function focusBranch(lat, lng) {
+  map.setView([lat, lng], 15, { animate: true });
+  markers.forEach(m => { if (Math.abs(m.getLatLng().lat - lat) < .001) m.openPopup(); });
+}
+document.getElementById('btn-gps').addEventListener('click', () => {
+  findNearestBranch(map, branches => {
+    const list = document.getElementById('nearest-list');
+    list.innerHTML = branches.map((b, i) => `
+      <div style="padding:12px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:500">${i+1}. ${b.name}</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:2px">${b.address}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-size:20px;font-weight:700;color:var(--primary)">${b.distance_km} km</div>
+          <a href="${b.url}" class="btn btn-secondary btn-sm" style="margin-top:4px;display:inline-flex">Xem</a>
+        </div>
+      </div>`).join('');
+    document.getElementById('nearest-panel').style.display = 'block';
+    document.getElementById('nearest-panel').scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+{% endblock %}

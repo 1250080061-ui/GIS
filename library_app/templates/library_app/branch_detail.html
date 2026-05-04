@@ -1,0 +1,158 @@
+{% extends 'library_app/base.html' %}
+{% block title %}{{ branch.name }} · LibraryGIS{% endblock %}
+{% block n_branch %}active{% endblock %}
+{% block page_title %}{{ branch.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+#branch-map  { height: 320px; }
+#reader-map  { height: 300px; }
+</style>
+{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'branch_list' %}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>
+<a href="/admin/library_app/branch/{{ branch.pk }}/change/" class="btn btn-primary"><i class="ph ph-pencil"></i> Chỉnh sửa</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Stats row -->
+<div class="stats-grid mb-24" style="grid-template-columns:repeat(4,1fr)">
+  <div class="stat gold">
+    <div class="stat-icon"><i class="ph ph-books"></i></div>
+    <div class="stat-val">{{ stats.book_count }}</div>
+    <div class="stat-label">Tổng đầu sách</div>
+  </div>
+  <div class="stat teal">
+    <div class="stat-icon"><i class="ph ph-check-circle"></i></div>
+    <div class="stat-val">{{ stats.available }}</div>
+    <div class="stat-label">Sách có sẵn</div>
+  </div>
+  <div class="stat blue">
+    <div class="stat-icon"><i class="ph ph-users"></i></div>
+    <div class="stat-val">{{ stats.reader_count }}</div>
+    <div class="stat-label">Độc giả</div>
+  </div>
+  <div class="stat red">
+    <div class="stat-icon"><i class="ph ph-warning"></i></div>
+    <div class="stat-val">{{ stats.overdue }}</div>
+    <div class="stat-label">Quá hạn</div>
+  </div>
+</div>
+
+<div class="grid-2 mb-24">
+  <!-- Info card -->
+  <div class="card" style="padding:24px">
+    <h2 style="font-family:var(--font-serif);font-size:20px;color:var(--gold);margin-bottom:18px">🏛️ Thông tin chi nhánh</h2>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      {% for icon, label, val in branch_info %}
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <i class="{{ icon }}" style="font-size:18px;color:var(--text3);margin-top:1px;flex-shrink:0"></i>
+        <div>
+          <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px">{{ label }}</div>
+          <div style="margin-top:2px">{{ val }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="display:flex;gap:12px"><i class="ph ph-map-pin" style="font-size:18px;color:var(--text3)"></i>
+        <div><div class="text-dim" style="font-size:11px;text-transform:uppercase">Địa chỉ</div><div>{{ branch.address }}</div></div></div>
+      <div style="display:flex;gap:12px"><i class="ph ph-phone" style="font-size:18px;color:var(--text3)"></i>
+        <div><div class="text-dim" style="font-size:11px;text-transform:uppercase">Điện thoại</div><div>{{ branch.phone|default:"Chưa cập nhật" }}</div></div></div>
+      <div style="display:flex;gap:12px"><i class="ph ph-clock" style="font-size:18px;color:var(--text3)"></i>
+        <div><div class="text-dim" style="font-size:11px;text-transform:uppercase">Giờ mở cửa</div><div>{{ branch.opening_hours }}</div></div></div>
+      <div style="display:flex;gap:12px"><i class="ph ph-compass" style="font-size:18px;color:var(--text3)"></i>
+        <div><div class="text-dim" style="font-size:11px;text-transform:uppercase">Tọa độ</div>
+          <div class="mono" style="color:var(--gold)">{{ branch.latitude }}, {{ branch.longitude }}</div></div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Branch location map -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="ph ph-map-pin"></i> Vị trí chi nhánh</span></div>
+    <div class="map-wrap"><div id="branch-map"></div></div>
+  </div>
+</div>
+
+<div class="grid-2 mb-24">
+  <!-- Reader heatmap -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="ph ph-fire"></i> Phân bố độc giả</span></div>
+    <div class="map-wrap"><div id="reader-map"></div></div>
+  </div>
+
+  <!-- Recent borrows -->
+  <div class="card">
+    <div class="card-head"><span class="card-title"><i class="ph ph-clock-clockwise"></i> Phiếu mượn gần đây</span></div>
+    <table>
+      <thead><tr><th>Độc giả</th><th>Sách</th><th>Hạn trả</th><th>TT</th></tr></thead>
+      <tbody>
+        {% for borrow in recent_borrows %}
+        <tr>
+          <td style="font-weight:500">{{ borrow.reader.full_name }}</td>
+          <td class="text-muted">{{ borrow.book.title|truncatechars:24 }}</td>
+          <td class="mono">{{ borrow.due_date|date:"d/m/Y" }}</td>
+          <td>
+            {% if borrow.status == 'borrowed' %}<span class="badge badge-info">Đang</span>
+            {% elif borrow.status == 'returned' %}<span class="badge badge-success">Trả</span>
+            {% elif borrow.status == 'overdue' %}<span class="badge badge-danger">QH</span>{% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;padding:24px" class="text-dim">Chưa có phiếu mượn</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Book list -->
+<div class="card">
+  <div class="card-head">
+    <span class="card-title"><i class="ph ph-books"></i> Sách tại chi nhánh</span>
+    <a href="{% url 'book_list' %}?branch={{ branch.pk }}" class="btn btn-ghost btn-sm">Xem tất cả</a>
+  </div>
+  <table>
+    <thead><tr><th>ISBN</th><th>Tên sách</th><th>Tác giả</th><th>Danh mục</th><th>Có sẵn</th><th>Tổng</th></tr></thead>
+    <tbody>
+      {% for book in books %}
+      <tr>
+        <td class="mono text-dim">{{ book.isbn }}</td>
+        <td><a href="{% url 'book_detail' book.pk %}" class="text-gold" style="text-decoration:none;font-weight:500">{{ book.title }}</a></td>
+        <td class="text-muted">{{ book.author }}</td>
+        <td>{% if book.category %}<span class="badge badge-info">{{ book.category.name }}</span>{% else %}—{% endif %}</td>
+        <td>
+          {% if book.available_copies > 0 %}<span class="badge badge-success">{{ book.available_copies }}</span>
+          {% else %}<span class="badge badge-danger">Hết</span>{% endif %}
+        </td>
+        <td class="text-muted">{{ book.total_copies }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;padding:30px" class="text-dim">Chưa có sách</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const bLat = {{ branch.latitude }};
+const bLng = {{ branch.longitude }};
+const readersGeo = {{ readers_geojson|safe }};
+
+// Branch location map
+const branchMap = initMap('branch-map', bLat, bLng, 15);
+const icon = branchIcon();
+L.marker([bLat, bLng], { icon })
+  .bindPopup(`<div class="popup-title">{{ branch.name }}</div><div class="popup-row">{{ branch.address }}</div>`)
+  .addTo(branchMap)
+  .openPopup();
+
+// Reader distribution map
+const readerMap = initMap('reader-map', bLat, bLng, 13);
+L.marker([bLat, bLng], { icon: branchIcon() }).addTo(readerMap);
+addReaderLayer(readerMap, readersGeo);
+</script>
+{% endblock %}

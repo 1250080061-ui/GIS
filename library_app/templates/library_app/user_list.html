@@ -1,0 +1,126 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Quản lý tài khoản — LibraryGIS{% endblock %}
+{% block n_user_mgmt %}active{% endblock %}
+{% block page_title %}Quản lý tài khoản{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'user_create' %}" class="btn btn-primary">
+  <i class="ph ph-user-plus"></i> Thêm tài khoản
+</a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="search-bar">
+  <div class="search-wrap">
+    <i class="ph ph-magnifying-glass"></i>
+    <input type="text" name="search" value="{{ search }}" placeholder="Tên đăng nhập, email, họ tên..." class="form-control">
+  </div>
+  <select name="role" class="form-control" style="max-width:180px">
+    <option value="">Tất cả vai trò</option>
+    <option value="superuser" {% if role == 'superuser' %}selected{% endif %}>Quản trị viên</option>
+    <option value="staff" {% if role == 'staff' %}selected{% endif %}>Thủ thư</option>
+    <option value="user" {% if role == 'user' %}selected{% endif %}>Người dùng</option>
+  </select>
+  <button type="submit" class="btn btn-primary">
+    <i class="ph ph-funnel"></i> Lọc
+  </button>
+  {% if search or role %}
+  <a href="{% url 'user_list' %}" class="btn btn-ghost">
+    <i class="ph ph-x"></i> Xóa lọc
+  </a>
+  {% endif %}
+</form>
+
+<div class="flex-between mb-16">
+  <span class="text-muted text-sm">
+    Tìm thấy <strong style="color:var(--text)">{{ total_count }}</strong> tài khoản
+  </span>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Tên đăng nhập</th>
+        <th>Họ tên</th>
+        <th>Email</th>
+        <th>Vai trò</th>
+        <th>Trạng thái</th>
+        <th>Ngày tạo</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for u in users %}
+      <tr>
+        <td class="mono fw-500 text-primary">{{ u.username }}</td>
+        <td>{{ u.get_full_name|default:"—" }}</td>
+        <td class="text-muted text-sm">{{ u.email|default:"—" }}</td>
+        <td>
+          {% if u.is_superuser %}
+            <span class="badge badge-danger">Quản trị viên</span>
+          {% elif u.is_staff %}
+            <span class="badge badge-warning">Thủ thư</span>
+          {% else %}
+            <span class="badge badge-muted">Người dùng</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if u.is_active %}
+            <span class="badge badge-success">Hoạt động</span>
+          {% else %}
+            <span class="badge badge-danger">Vô hiệu</span>
+          {% endif %}
+        </td>
+        <td class="mono text-sm text-muted">{{ u.date_joined|date:"d/m/Y" }}</td>
+        <td>
+          <div class="flex-gap">
+            <a href="{% url 'user_edit' u.pk %}" class="btn btn-ghost btn-sm" title="Chỉnh sửa">
+              <i class="ph ph-pencil"></i>
+            </a>
+            {% if u != request.user %}
+            <a href="{% url 'user_delete' u.pk %}" class="btn btn-ghost btn-sm" title="Xóa"
+               style="color:var(--danger)">
+              <i class="ph ph-trash"></i>
+            </a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <span class="empty-state-icon"><i class="ph ph-users"></i></span>
+            <div class="empty-state-title">Không tìm thấy tài khoản nào</div>
+            <div class="empty-state-sub">
+              <a href="{% url 'user_create' %}" class="text-primary">Thêm tài khoản mới →</a>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if users.has_other_pages %}
+  <div class="pagination">
+    {% if users.has_previous %}
+    <a href="?page={{ users.previous_page_number }}&search={{ search }}&role={{ role }}" class="page-link">
+      <i class="ph ph-caret-left"></i>
+    </a>
+    {% endif %}
+    {% for n in users.paginator.page_range %}
+    <a href="?page={{ n }}&search={{ search }}&role={{ role }}"
+       class="page-link {% if users.number == n %}current{% endif %}">{{ n }}</a>
+    {% endfor %}
+    {% if users.has_next %}
+    <a href="?page={{ users.next_page_number }}&search={{ search }}&role={{ role }}" class="page-link">
+      <i class="ph ph-caret-right"></i>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

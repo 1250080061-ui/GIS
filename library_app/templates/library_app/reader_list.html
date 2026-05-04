@@ -1,0 +1,121 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Độc giả — LibraryGIS{% endblock %}
+{% block n_reader %}active{% endblock %}
+{% block page_title %}Quản lý độc giả{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'reader_create' %}" class="btn btn-primary">
+  <i class="ph ph-user-plus"></i> Cấp thẻ mới
+</a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="search-bar">
+  <div class="search-wrap">
+    <i class="ph ph-magnifying-glass"></i>
+    <input type="text" name="search" value="{{ search }}" placeholder="Tên, mã thẻ, số điện thoại..." class="form-control">
+  </div>
+  <select name="status" class="form-control" style="max-width:180px">
+    <option value="">Tất cả trạng thái</option>
+    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Hoạt động</option>
+    <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Tạm khóa</option>
+    <option value="expired" {% if request.GET.status == 'expired' %}selected{% endif %}>Hết hạn</option>
+  </select>
+  <button type="submit" class="btn btn-primary">
+    <i class="ph ph-funnel"></i> Lọc
+  </button>
+  {% if search or request.GET.status %}
+  <a href="{% url 'reader_list' %}" class="btn btn-ghost">
+    <i class="ph ph-x"></i> Xóa lọc
+  </a>
+  {% endif %}
+</form>
+
+<div class="flex-between mb-16">
+  <span class="text-muted text-sm">
+    Tìm thấy <strong style="color:var(--text)">{{ total_count }}</strong> độc giả
+  </span>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>Mã thẻ</th>
+        <th>Họ tên</th>
+        <th>Điện thoại</th>
+        <th>Email</th>
+        <th>Ngày hết hạn</th>
+        <th>Trạng thái</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for reader in readers %}
+      <tr>
+        <td class="mono text-primary fw-500">{{ reader.card_number }}</td>
+        <td class="fw-500">{{ reader.full_name }}</td>
+        <td class="text-muted">{{ reader.phone }}</td>
+        <td class="text-muted text-sm">{{ reader.email }}</td>
+        <td class="mono text-sm">{{ reader.card_expiry_date|date:"d/m/Y" }}</td>
+        <td>
+          {% if reader.status == 'active' %}
+            <span class="badge badge-success">Hoạt động</span>
+          {% elif reader.status == 'suspended' %}
+            <span class="badge badge-danger">Tạm khóa</span>
+          {% else %}
+            <span class="badge badge-muted">Hết hạn</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="flex-gap">
+            <a href="{% url 'reader_detail' reader.pk %}" class="btn btn-ghost btn-sm" title="Xem chi tiết">
+              <i class="ph ph-eye"></i>
+            </a>
+            <a href="{% url 'reader_edit' reader.pk %}" class="btn btn-ghost btn-sm" title="Chỉnh sửa">
+              <i class="ph ph-pencil"></i>
+            </a>
+            <a href="{% url 'borrow_create' %}?reader={{ reader.pk }}" class="btn btn-secondary btn-sm" title="Tạo phiếu mượn">
+              <i class="ph ph-books"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <span class="empty-state-icon"><i class="ph ph-users"></i></span>
+            <div class="empty-state-title">Không tìm thấy độc giả nào</div>
+            <div class="empty-state-sub">
+              <a href="{% url 'reader_create' %}" class="text-primary">Cấp thẻ độc giả mới →</a>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if readers.has_other_pages %}
+  <div class="pagination">
+    {% if readers.has_previous %}
+    <a href="?page={{ readers.previous_page_number }}&search={{ search }}" class="page-link">
+      <i class="ph ph-caret-left"></i>
+    </a>
+    {% endif %}
+    {% for n in readers.paginator.page_range %}
+    <a href="?page={{ n }}&search={{ search }}"
+       class="page-link {% if readers.number == n %}current{% endif %}">{{ n }}</a>
+    {% endfor %}
+    {% if readers.has_next %}
+    <a href="?page={{ readers.next_page_number }}&search={{ search }}" class="page-link">
+      <i class="ph ph-caret-right"></i>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

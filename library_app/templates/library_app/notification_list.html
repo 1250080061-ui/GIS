@@ -1,0 +1,76 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Thông báo · LibraryGIS{% endblock %}
+{% block n_notif %}active{% endblock %}
+{% block page_title %}Thông báo hệ thống{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'notification_mark_all_read' %}" class="btn btn-ghost btn-sm"><i class="ph ph-check-circle"></i> Đánh dấu đọc hết</a>
+{% endblock %}
+
+{% block content %}
+
+{% if unread_count > 0 %}
+<div class="alert alert-warning mb-16"><i class="ph ph-bell-ringing"></i> Có <strong>{{ unread_count }}</strong> thông báo chưa đọc</div>
+{% endif %}
+
+<div class="card">
+  {% for n in notifications %}
+  <div style="display:flex;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border);align-items:flex-start;{% if not n.is_read %}background:rgba(240,192,64,.03){% endif %}">
+    <div style="width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+      {% if n.type == 'overdue' %}background:rgba(248,81,73,.12){% elif n.type == 'due_soon' %}background:rgba(227,179,65,.12){% elif n.type == 'fine' %}background:rgba(240,192,64,.12){% else %}background:rgba(88,166,255,.12){% endif %}">
+      {% if n.type == 'overdue' %}<i class="ph ph-warning-circle" style="font-size:20px;color:var(--red)"></i>
+      {% elif n.type == 'due_soon' %}<i class="ph ph-clock" style="font-size:20px;color:var(--orange)"></i>
+      {% elif n.type == 'fine' %}<i class="ph ph-currency-circle-dollar" style="font-size:20px;color:var(--gold)"></i>
+      {% else %}<i class="ph ph-bell" style="font-size:20px;color:var(--blue)"></i>{% endif %}
+    </div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+        <span style="font-weight:600;font-size:13px">{{ n.title }}</span>
+        {% if not n.is_read %}<span class="badge badge-gold" style="background:rgba(240,192,64,.15);color:var(--gold);font-size:10px">Mới</span>{% endif %}
+      </div>
+      <div style="font-size:12px;color:var(--text2)">{{ n.message }}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;display:flex;align-items:center;gap:6px">
+        <i class="ph ph-clock"></i> {{ n.created_at|date:"d/m/Y H:i" }}
+        {% if n.reader %} · <a href="{% url 'reader_detail' n.reader.pk %}" style="color:var(--blue);text-decoration:none">{{ n.reader.full_name }}</a>{% endif %}
+      </div>
+    </div>
+    {% if not n.is_read %}
+    <a href="{% url 'notification_mark_read' n.pk %}" class="btn btn-ghost btn-sm" style="flex-shrink:0">✓ Đọc</a>
+    {% else %}
+    <span style="color:var(--text3);font-size:12px;flex-shrink:0;padding:5px 0">✓ Đã đọc</span>
+    {% endif %}
+  </div>
+  {% empty %}
+  <div style="text-align:center;padding:60px;color:var(--text3)">
+    <i class="ph ph-bell-slash" style="font-size:48px;opacity:.3;display:block;margin-bottom:12px"></i>
+    Không có thông báo nào
+  </div>
+  {% endfor %}
+
+  {% if notifications.has_other_pages %}
+  <div class="pagination">
+    {% if notifications.has_previous %}<a href="?page={{ notifications.previous_page_number }}" class="page-link"><i class="ph ph-caret-left"></i></a>{% endif %}
+    {% for n in notifications.paginator.page_range %}<a href="?page={{ n }}" class="page-link {% if notifications.number == n %}current{% endif %}">{{ n }}</a>{% endfor %}
+    {% if notifications.has_next %}<a href="?page={{ notifications.next_page_number }}" class="page-link"><i class="ph ph-caret-right"></i></a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if notifications.has_previous %}
+            <a href="?page=1&search={{ search }}">First</a>
+            <a href="?page={{ notifications.previous_page_number }}&search={{ search }}">Previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}.
+        </span>
+
+        {% if notifications.has_next %}
+            <a href="?page={{ notifications.next_page_number }}&search={{ search }}">Next</a>
+            <a href="?page={{ notifications.paginator.num_pages }}&search={{ search }}">Last</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}Nhập/Xuất Excel{% endblock %}
+
+{% block content %}
+
+<div class="card mb-20">
+  <div class="card-head">
+    <span class="card-title">📥 Nhập sách từ Excel</span>
+  </div>
+  <div class="card-body">
+
+    <form method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      
+      <input type="file" name="file" required class="form-control mb-10">
+      
+      <button class="btn btn-primary">Upload Excel</button>
+    </form>
+
+    <div style="margin-top:20px">
+      <small>
+        ⚠ File Excel cần có các cột:  
+        <b>Tên sách | Tác giả | ISBN | NXB | Năm | Số lượng</b>
+      </small>
+    </div>
+
+  </div>
+</div>
+
+
+<div class="card">
+  <div class="card-head">
+    <span class="card-title">📤 Xuất dữ liệu</span>
+  </div>
+  <div class="card-body">
+    
+    <a href="{% url 'export_books' %}" class="btn btn-success">
+      Tải file Excel
+    </a>
+
+  </div>
+</div>
+
+{% endblock %}

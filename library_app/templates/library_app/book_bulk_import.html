@@ -1,0 +1,259 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Nhập sách hàng loạt{% endblock %}
+{% block n_book %}active{% endblock %}
+{% block page_title %}Nhập sách hàng loạt từ Google Books{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'book_list' %}" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="align-items:start">
+
+<!-- Bên trái: nhập ISBN -->
+<div class="card">
+<div class="card-head">
+    <span class="card-title"><i class="ph ph-list-numbers" style="color:var(--primary)"></i> Danh sách ISBN</span>
+</div>
+<div class="card-body">
+    <div class="form-group">
+    <label class="form-label">Paste ISBN vào đây — mỗi dòng 1 ISBN</label>
+    <textarea id="isbn-list" class="form-control" rows="12"
+        placeholder="9780062315007&#10;9780062316097&#10;9780735224292&#10;9781501156700&#10;..."></textarea>
+    <div class="form-help">Hỗ trợ ISBN-10 và ISBN-13. Có thể copy từ Excel, Google Sheets...</div>
+    </div>
+
+    <div class="form-group">
+    <label class="form-label">Số bản mỗi cuốn</label>
+    <input type="number" id="copies" class="form-control" value="1" min="1" style="max-width:120px">
+    </div>
+
+    <div class="form-group">
+    <label class="form-label">Danh mục mặc định</label>
+    <select id="default-category" class="form-control">
+        <option value="">-- Chưa phân loại --</option>
+        {% for cat in categories %}
+        <option value="{{ cat.pk }}">{{ cat.name }}</option>
+        {% endfor %}
+    </select>
+    </div>
+
+    <button class="btn btn-primary" id="btn-fetch" style="width:100%">
+    <i class="ph ph-magnifying-glass"></i> Tìm thông tin từ Google Books
+    </button>
+</div>
+</div>
+
+<!-- Bên phải: kết quả -->
+<div>
+<!-- Progress -->
+<div id="progress-card" class="card mb-16" style="display:none">
+    <div class="card-body">
+    <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px">
+        <span>Đang tìm kiếm...</span>
+        <span id="progress-text">0/0</span>
+    </div>
+    <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+        <div id="progress-bar" style="height:100%;background:var(--primary);border-radius:4px;width:0%;transition:.3s"></div>
+    </div>
+    </div>
+</div>
+
+<!-- Preview list -->
+<div id="results-card" class="card" style="display:none">
+    <div class="card-head">
+    <span class="card-title"><i class="ph ph-books" style="color:var(--primary)"></i> Kết quả</span>
+    <div class="flex-gap">
+        <span id="result-count" class="text-muted text-sm"></span>
+        <button class="btn btn-success" id="btn-import-all">
+        <i class="ph ph-download-simple"></i> Nhập tất cả vào hệ thống
+        </button>
+    </div>
+    </div>
+    <div id="results-list"></div>
+</div>
+</div>
+</div>
+
+<!-- Import progress modal -->
+<div id="import-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;display:none;align-items:center;justify-content:center">
+<div style="background:var(--bg2);border-radius:12px;padding:32px;max-width:400px;width:90%;text-align:center">
+<div style="font-size:48px;margin-bottom:16px">📚</div>
+<div style="font-size:18px;font-weight:600;margin-bottom:8px">Đang nhập sách...</div>
+<div id="import-status" style="font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+<div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+    <div id="import-bar" style="height:100%;background:var(--primary);border-radius:4px;width:0%;transition:.3s"></div>
+</div>
+<div id="import-done" style="display:none;margin-top:20px">
+    <div style="color:var(--green);font-size:16px;font-weight:600;margin-bottom:12px">✅ Nhập xong!</div>
+    <a href="{% url 'book_list' %}" class="btn btn-primary">Xem danh sách sách</a>
+</div>
+</div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let foundBooks = [];
+
+// Fetch thông tin từ Google Books
+document.getElementById('btn-fetch').addEventListener('click', async () => {
+const raw     = document.getElementById('isbn-list').value.trim();
+const isbns   = raw.split('\n').map(s => s.trim()).filter(s => s.length >= 10);
+
+if (!isbns.length) {
+alert('Vui lòng nhập ít nhất 1 ISBN!');
+return;
+}
+
+foundBooks = [];
+document.getElementById('progress-card').style.display = 'block';
+document.getElementById('results-card').style.display  = 'none';
+document.getElementById('btn-fetch').disabled = true;
+
+const bar  = document.getElementById('progress-bar');
+const txt  = document.getElementById('progress-text');
+
+for (let i = 0; i < isbns.length; i++) {
+const isbn = isbns[i];
+txt.textContent = `${i + 1}/${isbns.length} — ${isbn}`;
+bar.style.width = `${((i + 1) / isbns.length) * 100}%`;
+
+try {
+    const res  = await fetch(`https://www.googleapis.com/books/v1/volumes?q=isbn:${isbn}&maxResults=1`);
+    const data = await res.json();
+
+    if (data.items && data.items.length > 0) {
+    const info  = data.items[0].volumeInfo;
+    const isbnId = (info.industryIdentifiers || [])
+        .find(x => x.type === 'ISBN_13' || x.type === 'ISBN_10');
+
+    foundBooks.push({
+        isbn:        isbnId ? isbnId.identifier : isbn,
+        title:       info.title || 'Không rõ',
+        author:      (info.authors || []).join(', ') || 'Không rõ',
+        publisher:   info.publisher || '',
+        year:        info.publishedDate ? info.publishedDate.substring(0, 4) : '',
+        pages:       info.pageCount || null,
+        description: info.description ? info.description.substring(0, 600) : '',
+        cover:       info.imageLinks ? info.imageLinks.thumbnail.replace('http:', 'https:') : '',
+        language:    info.language === 'vi' ? 'Tiếng Việt' : info.language === 'en' ? 'Tiếng Anh' : 'Tiếng Việt',
+        found:       true,
+    });
+    } else {
+    foundBooks.push({ isbn, title: 'Không tìm thấy', found: false });
+    }
+} catch {
+    foundBooks.push({ isbn, title: 'Lỗi kết nối', found: false });
+}
+
+// Delay nhỏ tránh rate limit
+await new Promise(r => setTimeout(r, 300));
+}
+
+document.getElementById('btn-fetch').disabled = false;
+renderResults();
+});
+
+
+function renderResults() {
+const found   = foundBooks.filter(b => b.found);
+const notFound = foundBooks.filter(b => !b.found);
+
+document.getElementById('results-card').style.display = 'block';
+document.getElementById('result-count').textContent =
+`${found.length} tìm thấy, ${notFound.length} không có`;
+
+const html = foundBooks.map((b, i) => `
+<div style="display:flex;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);
+    ${!b.found ? 'opacity:.5' : ''}">
+    <input type="checkbox" id="chk-${i}" ${b.found ? 'checked' : 'disabled'}
+    style="margin-top:4px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
+    ${b.cover
+    ? `<img src="${b.cover}" style="width:44px;height:60px;object-fit:cover;border-radius:4px;flex-shrink:0">`
+    : `<div style="width:44px;height:60px;background:var(--bg4);border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center">📚</div>`
+    }
+    <div style="flex:1;min-width:0">
+    <div style="font-weight:600;font-size:13px;${b.found ? '' : 'color:var(--red)'}">
+        ${b.title}
+    </div>
+    <div style="font-size:12px;color:var(--text2)">${b.author || ''} · ${b.year || ''}</div>
+    <div style="font-size:11px;color:var(--text3)">${b.publisher || ''}</div>
+    <div class="mono" style="font-size:11px;color:var(--text3)">ISBN: ${b.isbn}</div>
+    </div>
+    ${b.found
+    ? `<span class="badge badge-success">Tìm thấy</span>`
+    : `<span class="badge badge-danger">Không có</span>`
+    }
+</div>
+`).join('');
+
+document.getElementById('results-list').innerHTML = html;
+}
+
+
+// Nhập vào hệ thống qua API
+document.getElementById('btn-import-all').addEventListener('click', async () => {
+const copies   = parseInt(document.getElementById('copies').value) || 1;
+const category = document.getElementById('default-category').value;
+
+const selected = foundBooks.filter((b, i) => {
+const chk = document.getElementById(`chk-${i}`);
+return chk && chk.checked && b.found;
+});
+
+if (!selected.length) {
+alert('Không có sách nào được chọn!');
+return;
+}
+
+// Show modal
+const modal = document.getElementById('import-modal');
+modal.style.display = 'flex';
+const bar    = document.getElementById('import-bar');
+const status = document.getElementById('import-status');
+
+let success = 0;
+let fail    = 0;
+
+for (let i = 0; i < selected.length; i++) {
+const b = selected[i];
+status.textContent = `Đang nhập: ${b.title} (${i + 1}/${selected.length})`;
+bar.style.width = `${((i + 1) / selected.length) * 100}%`;
+
+const form = new FormData();
+form.append('isbn',             b.isbn);
+form.append('title',            b.title);
+form.append('author',           b.author);
+form.append('publisher',        b.publisher || '');
+form.append('publish_year',     b.year || new Date().getFullYear());
+form.append('pages',            b.pages || '');
+form.append('description',      b.description || '');
+form.append('language',         b.language || 'Tiếng Việt');
+form.append('total_copies',     copies);
+form.append('available_copies', copies);
+form.append('cover_url',        b.cover || '');
+if (category) form.append('category', category);
+form.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+try {
+    const res = await fetch('/books/import-single/', {
+    method: 'POST',
+    body: form,
+    });
+    const data = await res.json();
+    if (data.ok) success++;
+    else fail++;
+} catch {
+    fail++;
+}
+
+await new Promise(r => setTimeout(r, 200));
+}
+
+status.textContent = `Thành công: ${success}, Lỗi: ${fail}`;
+document.getElementById('import-done').style.display = 'block';
+});
+</script>
+{% endblock %}

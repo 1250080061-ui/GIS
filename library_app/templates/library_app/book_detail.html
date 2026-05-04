@@ -1,0 +1,157 @@
+{% extends 'library_app/base.html' %}
+
+{% block title %}{{ book.title }} - LibraryGIS{% endblock %}
+{% block n_book %}active{% endblock %}
+{% block page_title %}Chi tiết sách{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'book_list' %}" class="btn btn-ghost">
+    <i class="ph ph-arrow-left"></i> Kho sách
+</a>
+<a href="{% url 'book_edit' book.pk %}" class="btn btn-ghost">
+    <i class="ph ph-pencil"></i> Chỉnh sửa
+</a>
+{% if book.is_available %}
+<a href="{% url 'borrow_create' %}?book={{ book.pk }}" class="btn btn-primary">
+    <i class="ph ph-arrow-left"></i> Tạo phiếu mượn
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="margin-bottom: 24px;">
+    <div class="card" style="padding: 28px;">
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+            <div style="width: 100px; height: 140px; background: var(--bg-card2); border-radius: 10px;
+                        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+                        font-size: 48px; border: 1px solid var(--border);">
+                📖
+            </div>
+            <div style="flex: 1;">
+                <h2
+                    style="font-family: var(--font-display); font-size: 22px; color: var(--primary); margin-bottom: 8px;">
+                    {{ book.title }}
+                </h2>
+                <p style="font-size: 15px; color: var(--text-muted); margin-bottom: 16px;">{{ book.author }}</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                    {% if book.category %}
+                    <span class="badge badge-info">{{ book.category.name }}</span>
+                    {% endif %}
+                    {% if book.is_available %}
+                    <span class="badge badge-success">Có sẵn</span>
+                    {% else %}
+                    <span class="badge badge-danger">Hết sách</span>
+                    {% endif %}
+                </div>
+                <div style="font-family: monospace; font-size: 12px; color: var(--text-muted);">
+                    ISBN: {{ book.isbn }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);
+                    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Nhà xuất bản</div>
+                <div style="margin-top: 4px;">{{ book.publisher }}</div>
+            </div>
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Năm xuất bản</div>
+                <div style="margin-top: 4px;">{{ book.publish_year }}</div>
+            </div>
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Ngôn ngữ</div>
+                <div style="margin-top: 4px;">{{ book.language }}</div>
+            </div>
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Số trang</div>
+                <div style="margin-top: 4px;">{{ book.pages|default:"—" }}</div>
+            </div>
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Chi nhánh</div>
+                <div style="margin-top: 4px;">
+                    {% if book.branch and book.branch.pk %}
+                    <a href="{% url 'branch_detail' book.branch.pk %}"
+                        style="color: var(--primary); text-decoration: none;">
+                        {{ book.branch.name }}
+                    </a>
+                    {% else %}
+                    <span class="text-muted">Chưa có chi nhánh</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <div
+                    style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                    Bản sách</div>
+                <div style="margin-top: 4px;">
+                    <span style="color: var(--success); font-weight: 700;">{{ book.available_copies }}</span>
+                    <span style="color: var(--text-muted);">/ {{ book.total_copies }} bản</span>
+                </div>
+            </div>
+        </div>
+
+        {% if book.description %}
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <div
+                style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                Mô tả</div>
+            <p style="font-size: 14px; line-height: 1.7; color: var(--text-muted);">{{ book.description }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Borrow history -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📋 Lịch sử mượn</span>
+            <span style="font-size: 13px; color: var(--text-muted);">{{ borrow_history|length }} lần</span>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Độc giả</th>
+                    <th>Ngày mượn</th>
+                    <th>Hạn trả</th>
+                    <th>Trạng thái</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for borrow in borrow_history %}
+                <tr>
+                    <td>
+                        <a href="{% url 'reader_detail' borrow.reader.pk %}"
+                            style="color: var(--text); text-decoration: none; font-weight: 500;">
+                            {{ borrow.reader.full_name }}
+                        </a>
+                    </td>
+                    <td style="font-size: 13px; color: var(--text-muted);">{{ borrow.borrow_date|date:"d/m/Y" }}</td>
+                    <td style="font-size: 13px;">{{ borrow.due_date|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if borrow.status == 'borrowed' %}<span class="badge badge-info">Đang mượn</span>
+                        {% elif borrow.status == 'returned' %}<span class="badge badge-success">Đã trả</span>
+                        {% elif borrow.status == 'overdue' %}<span class="badge badge-danger">Quá hạn</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 30px;">Chưa có lịch sử
+                        mượn</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

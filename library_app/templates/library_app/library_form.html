@@ -1,0 +1,122 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-ghost">
+  <i class="ph ph-arrow-left"></i> Quay lại
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:1000px;margin:0 auto">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">
+        <i class="ph ph-map-pin" style="color:var(--primary)"></i> {{ title }}
+      </span>
+    </div>
+
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="form-grid">
+          {% for field in form %}
+            <div class="form-group {% if field.name == 'address' or field.name == 'description' %}full{% endif %}">
+              <label class="form-label">
+                {{ field.label }}
+                {% if field.field.required %}<span class="form-req">*</span>{% endif %}
+              </label>
+              {{ field }}
+              {% if field.errors %}
+                <div class="form-error">{{ field.errors|join:", " }}</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+
+        <div class="card" style="margin-top:20px">
+          <div class="card-head">
+            <span class="card-title">
+              <i class="ph ph-map-trifold"></i> Chọn tọa độ trên bản đồ
+            </span>
+          </div>
+          <div class="card-body">
+            <div style="font-size:13px;color:var(--text2);margin-bottom:10px">
+              Bấm vào bản đồ để tự động điền <strong>Vĩ độ</strong> và <strong>Kinh độ</strong>.
+            </div>
+            <div id="pick-map" style="height:420px;border-radius:12px;overflow:hidden;border:1px solid var(--border)"></div>
+          </div>
+        </div>
+
+        <div class="flex-gap" style="margin-top:20px;padding-top:18px;border-top:1px solid var(--border)">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="ph ph-floppy-disk"></i> Lưu
+          </button>
+          <a href="javascript:history.back()" class="btn btn-ghost btn-lg">Hủy</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const latInput = document.getElementById('id_latitude');
+  const lngInput = document.getElementById('id_longitude');
+
+  const initialLat = parseFloat(latInput?.value) || 10.776889;
+  const initialLng = parseFloat(lngInput?.value) || 106.700806;
+
+  const map = L.map('pick-map').setView([initialLat, initialLng], 12);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap'
+  }).addTo(map);
+
+  let marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+  function updateInputs(lat, lng) {
+    latInput.value = lat.toFixed(6);
+    lngInput.value = lng.toFixed(6);
+  }
+
+  map.on('click', function(e) {
+    const lat = e.latlng.lat;
+    const lng = e.latlng.lng;
+    marker.setLatLng([lat, lng]);
+    updateInputs(lat, lng);
+  });
+
+  marker.on('dragend', function(e) {
+    const pos = marker.getLatLng();
+    updateInputs(pos.lat, pos.lng);
+  });
+
+  if (latInput && lngInput) {
+    latInput.addEventListener('change', function() {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lngInput.value);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+      }
+    });
+
+    lngInput.addEventListener('change', function() {
+      const lat = parseFloat(latInput.value);
+      const lng = parseFloat(lngInput.value);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        marker.setLatLng([lat, lng]);
+        map.setView([lat, lng], 15);
+      }
+    });
+  }
+</script>
+{% endblock %}

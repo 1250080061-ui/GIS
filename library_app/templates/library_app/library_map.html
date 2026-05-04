@@ -1,0 +1,420 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Bản đồ thư viện toàn quốc{% endblock %}
+{% block page_title %}Bản đồ thư viện toàn quốc{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <div class="page-header-title">Bản đồ thư viện toàn quốc</div>
+        <div class="page-header-sub">Tìm kiếm và tra cứu các thư viện trên toàn quốc</div>
+    </div>
+</div>
+
+{% if request.user.is_staff %}
+<div class="flex-gap mb-20">
+  <a href="{% url 'library_create' %}" class="btn btn-primary">
+    <i class="ph ph-plus"></i> Thêm thư viện
+  </a>
+
+  <a href="{% url 'branch_create' %}" class="btn btn-ghost">
+    <i class="ph ph-plus"></i> Thêm chi nhánh
+  </a>
+</div>
+{% endif %}
+<div class="stats-grid" style="grid-template-columns: repeat(1, 1fr); margin-bottom: 20px;">
+    <div class="stat blue">
+        <div class="stat-icon"><i class="ph ph-map-pin"></i></div>
+        <div class="stat-val">{{ total_libraries }}</div>
+        <div class="stat-label">Tổng số thư viện</div>
+    </div>
+</div>
+
+<div class="card mb-20">
+    <div class="card-body">
+        <form id="filterForm" class="search-bar" onsubmit="return false;">
+            <div class="search-wrap">
+                <i class="ph ph-magnifying-glass"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Tìm tên thư viện, địa chỉ, tỉnh thành...">
+            </div>
+
+            <select id="provinceSelect" class="form-control" style="max-width: 220px;">
+                <option value="">Tất cả tỉnh/thành</option>
+                {% for p in provinces %}
+                    <option value="{{ p }}">{{ p }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="button" class="btn btn-primary" onclick="loadLibraries()">
+                <i class="ph ph-funnel"></i> Lọc
+            </button>
+
+            <button type="button" class="btn btn-ghost" onclick="resetFilters()">
+                <i class="ph ph-arrow-clockwise"></i> Làm mới
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="grid-12">
+    <div class="card">
+        <div class="card-head">
+            <div class="card-title"><i class="ph ph-list"></i> Danh sách thư viện</div>
+        </div>
+        <div class="card-body" id="libraryList" style="max-height: 600px; overflow-y: auto;">
+            <div class="empty-state">
+                <div class="empty-state-title">Đang tải dữ liệu...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <div class="card-title"><i class="ph ph-map-trifold"></i> Bản đồ</div>
+        </div>
+        <div class="map-wrap">
+            <div id="map" style="height: 600px;"></div>
+        </div>
+    </div>
+</div>
+
+<div class="flex-gap mb-20">
+    <button type="button" class="btn btn-primary" onclick="locateUser()">
+        <i class="ph ph-map-pin-line"></i> Lấy vị trí của tôi
+    </button>
+
+    <input type="number" id="radiusInput" class="form-control" value="10" min="1" style="max-width: 140px;" placeholder="Bán kính km">
+
+    <button type="button" class="btn btn-primary" onclick="filterByRadius()">
+        <i class="ph ph-circle-dashed"></i> Tìm trong bán kính
+    </button>
+
+    <button type="button" class="btn btn-ghost" onclick="resetRadiusFilter()">
+        <i class="ph ph-arrow-clockwise"></i> Xóa lọc bán kính
+    </button>
+
+    <button type="button" class="btn btn-secondary" onclick="clearRoute()">
+        <i class="ph ph-x-circle"></i> Xóa đường đi
+    </button>
+
+    <div id="routeInfo" class="text-sm text-muted"></div>
+</div>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.css" />
+<script src="https://unpkg.com/leaflet-routing-machine/dist/leaflet-routing-machine.js"></script>
+
+<script>
+let map = L.map('map').setView([16.047079, 108.206230], 6);
+let markersLayer = L.layerGroup().addTo(map);
+let routingControl = null;
+let userMarker = null;
+let userLocation = null;
+let radiusCircle = null;
+let allLibraryFeatures = [];
+
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri'
+}).addTo(map);
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function formatDistance(meters) {
+    if (!meters && meters !== 0) return '-';
+    if (meters < 1000) return `${Math.round(meters)} m`;
+    return `${(meters / 1000).toFixed(2)} km`;
+}
+
+function formatTime(seconds) {
+    if (!seconds && seconds !== 0) return '-';
+    const mins = Math.round(seconds / 60);
+    if (mins < 60) return `${mins} phút`;
+    const hours = Math.floor(mins / 60);
+    const remain = mins % 60;
+    return `${hours} giờ ${remain} phút`;
+}
+
+function updateRouteInfo(distance, time, libName) {
+    const el = document.getElementById('routeInfo');
+    el.innerHTML = `
+        <strong>Đang dẫn tới:</strong> ${escapeHtml(libName)} |
+        <strong>Khoảng cách:</strong> ${formatDistance(distance)} |
+        <strong>Thời gian:</strong> ${formatTime(time)}
+    `;
+}
+
+function clearRouteInfo() {
+    document.getElementById('routeInfo').innerHTML = '';
+}
+
+function locateUser() {
+    if (!navigator.geolocation) {
+        alert('Trình duyệt không hỗ trợ định vị.');
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        function (pos) {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            userLocation = [lat, lng];
+
+            if (userMarker) {
+                map.removeLayer(userMarker);
+            }
+
+            userMarker = L.marker(userLocation, {
+                title: 'Vị trí của bạn'
+            }).addTo(map).bindPopup('Vị trí của bạn');
+
+            if (radiusCircle) {
+                map.removeLayer(radiusCircle);
+                radiusCircle = null;
+            }
+
+            renderLibraries(allLibraryFeatures);
+            map.setView(userLocation, 13);
+        },
+        function (err) {
+            alert('Không lấy được vị trí hiện tại. Hãy cho phép truy cập vị trí.');
+            console.error(err);
+        },
+        {
+            enableHighAccuracy: true,
+            timeout: 10000
+        }
+    );
+}
+
+function clearRoute() {
+    if (routingControl) {
+        map.removeControl(routingControl);
+        routingControl = null;
+    }
+    clearRouteInfo();
+}
+
+function drawRouteToLibrary(lat, lng, libName) {
+    if (!userLocation) {
+        alert('Hãy bấm "Lấy vị trí của tôi" trước.');
+        return;
+    }
+
+    clearRoute();
+
+    routingControl = L.Routing.control({
+        waypoints: [
+            L.latLng(userLocation[0], userLocation[1]),
+            L.latLng(lat, lng)
+        ],
+        routeWhileDragging: false,
+        addWaypoints: false,
+        draggableWaypoints: false,
+        fitSelectedRoutes: true,
+        show: false,
+        lineOptions: {
+            styles: [{ color: '#1e6fbf', weight: 5, opacity: 0.85 }]
+        },
+        router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1'
+        }),
+        createMarker: function(i, wp, nWps) {
+            if (i === 0) {
+                return L.marker(wp.latLng).bindPopup('Vị trí của bạn');
+            }
+            return L.marker(wp.latLng).bindPopup(libName);
+        }
+    }).addTo(map);
+
+    routingControl.on('routesfound', function(e) {
+        const route = e.routes[0];
+        updateRouteInfo(route.summary.totalDistance, route.summary.totalTime, libName);
+    });
+
+    routingControl.on('routingerror', function(e) {
+        clearRouteInfo();
+        alert('Không tìm được đường đi tới thư viện này.');
+        console.error(e);
+    });
+}
+
+function renderLibraries(features) {
+    markersLayer.clearLayers();
+
+    const listEl = document.getElementById('libraryList');
+    listEl.innerHTML = '';
+
+    if (!features || features.length === 0) {
+        listEl.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-title">Không tìm thấy thư viện phù hợp</div>
+            </div>
+        `;
+        return;
+    }
+
+    const bounds = [];
+
+    features.forEach(feature => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const p = feature.properties;
+
+        let distanceText = '';
+        if (userLocation) {
+            const distanceKm = haversineKm(userLocation[0], userLocation[1], lat, lng);
+            distanceText = `<div class="text-sm text-primary" style="margin-top:4px;">Cách bạn: ${distanceKm.toFixed(2)} km</div>`;
+        }
+
+        const popupHtml = `
+            <div>
+                <div class="popup-title">${escapeHtml(p.name)}</div>
+                <div class="popup-row"><strong>Tỉnh:</strong> ${escapeHtml(p.province)}</div>
+                <div class="popup-row"><strong>Địa chỉ:</strong> ${escapeHtml(p.address)}</div>
+                <div class="popup-row"><strong>Điện thoại:</strong> ${escapeHtml(p.phone || '-')}</div>
+                <div class="popup-row"><strong>Giờ mở cửa:</strong> ${escapeHtml(p.open_time || '-')}</div>
+                <div class="popup-row"><strong>Website:</strong> ${p.website ? `<a href="${p.website}" target="_blank">Mở website</a>` : '-'}</div>
+                ${userLocation ? `<div class="popup-row"><strong>Khoảng cách:</strong> ${haversineKm(userLocation[0], userLocation[1], lat, lng).toFixed(2)} km</div>` : ''}
+                <div style="margin-top:10px;">
+                    <button type="button" class="btn btn-primary btn-sm" onclick="drawRouteToLibrary(${lat}, ${lng}, '${String(p.name).replaceAll("'", "\\'")}')">
+                        Chỉ đường
+                    </button>
+                </div>
+            </div>
+        `;
+
+        const marker = L.marker([lat, lng]).bindPopup(popupHtml);
+        markersLayer.addLayer(marker);
+        bounds.push([lat, lng]);
+
+        const item = document.createElement('div');
+        item.className = 'info-row';
+        item.style.cursor = 'pointer';
+        item.innerHTML = `
+            <div class="info-row-icon"><i class="ph ph-map-pin"></i></div>
+            <div style="flex:1;">
+                <div class="info-row-label">${escapeHtml(p.province)}</div>
+                <div class="info-row-val"><strong>${escapeHtml(p.name)}</strong></div>
+                <div class="text-sm text-muted">${escapeHtml(p.address)}</div>
+                ${distanceText}
+                <div style="margin-top:8px;">
+                    <button type="button" class="btn btn-primary btn-sm">Chỉ đường</button>
+                </div>
+            </div>
+        `;
+
+        item.onclick = () => {
+            map.setView([lat, lng], 14);
+            marker.openPopup();
+        };
+
+        item.querySelector('button').onclick = function(ev) {
+            ev.stopPropagation();
+            drawRouteToLibrary(lat, lng, p.name);
+        };
+
+        listEl.appendChild(item);
+    });
+
+    if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [30, 30] });
+    }
+}
+
+function loadLibraries() {
+    const search = document.getElementById('searchInput').value;
+    const province = document.getElementById('provinceSelect').value;
+
+    const url = `/api/libraries-geojson/?search=${encodeURIComponent(search)}&province=${encodeURIComponent(province)}`;
+
+    fetch(url)
+        .then(res => res.json())
+        .then(data => {
+            allLibraryFeatures = data.features || [];
+            renderLibraries(allLibraryFeatures);
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('libraryList').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-title">Không tải được dữ liệu thư viện</div>
+                </div>
+            `;
+        });
+}
+
+function filterByRadius() {
+    if (!userLocation) {
+        alert('Hãy bấm "Lấy vị trí của tôi" trước.');
+        return;
+    }
+
+    const radiusKm = parseFloat(document.getElementById('radiusInput').value);
+    if (!radiusKm || radiusKm <= 0) {
+        alert('Vui lòng nhập bán kính hợp lệ.');
+        return;
+    }
+
+    if (radiusCircle) {
+        map.removeLayer(radiusCircle);
+    }
+
+    radiusCircle = L.circle(userLocation, {
+        radius: radiusKm * 1000,
+        color: '#1e6fbf',
+        fillColor: '#1e6fbf',
+        fillOpacity: 0.08,
+        weight: 2
+    }).addTo(map);
+
+    const filtered = allLibraryFeatures.filter(feature => {
+        const [lng, lat] = feature.geometry.coordinates;
+        const distanceKm = haversineKm(userLocation[0], userLocation[1], lat, lng);
+        return distanceKm <= radiusKm;
+    });
+
+    renderLibraries(filtered);
+
+    const bounds = radiusCircle.getBounds();
+    map.fitBounds(bounds, { padding: [30, 30] });
+}
+
+
+function resetRadiusFilter() {
+    if (radiusCircle) {
+        map.removeLayer(radiusCircle);
+        radiusCircle = null;
+    }
+    renderLibraries(allLibraryFeatures);
+}
+
+function resetFilters() {
+    document.getElementById('searchInput').value = '';
+    document.getElementById('provinceSelect').value = '';
+    loadLibraries();
+}
+
+loadLibraries();
+</script>
+{% endblock %}

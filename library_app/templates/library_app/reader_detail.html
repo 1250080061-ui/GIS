@@ -1,0 +1,210 @@
+{% extends 'library_app/base.html' %}
+
+{% block title %}{{ reader.full_name }} - LibraryGIS{% endblock %}
+{% block n_reader %}active{% endblock %}
+{% block page_title %}Hồ sơ độc giả{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'reader_list' %}" class="btn btn-ghost">
+    <i class="ph ph-arrow-left"></i> Danh sách
+</a>
+<a href="/admin/library_app/reader/{{ reader.pk }}/change/" class="btn btn-ghost">
+    <i class="ph ph-pencil"></i> Chỉnh sửa
+</a>
+<a href="{% url 'borrow_create' %}?reader={{ reader.pk }}" class="btn btn-primary">
+    <i class="ph ph-books"></i> Tạo phiếu mượn
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="grid-2" style="margin-bottom: 24px;">
+    <!-- Profile card -->
+    <div class="card" style="padding: 28px;">
+        <div style="display: flex; gap: 20px; align-items: flex-start; margin-bottom: 24px;">
+            <div style="width: 72px; height: 72px; border-radius: 50%;
+                        background: linear-gradient(135deg, var(--accent2), #3d6fe0);
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 28px; font-weight: 700; color: white; flex-shrink: 0;">
+                {{ reader.full_name|first|upper }}
+            </div>
+            <div style="flex: 1;">
+                <h2 style="font-family: var(--font-display); font-size: 22px; margin-bottom: 4px;">
+                    {{ reader.full_name }}
+                </h2>
+                <div style="font-family: monospace; font-size: 14px; color: var(--primary); margin-bottom: 8px;">
+                    {{ reader.card_number }}
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    {% if reader.status == 'active' %}
+                        <span class="badge badge-success">Hoạt động</span>
+                    {% elif reader.status == 'suspended' %}
+                        <span class="badge badge-danger">Tạm khóa</span>
+                    {% else %}
+                        <span class="badge badge-muted">Hết hạn</span>
+                    {% endif %}
+                    {% if not reader.is_card_valid %}
+                    <span class="badge badge-danger">Thẻ không hợp lệ</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Giới tính</div>
+                <div style="margin-top: 4px;">{{ reader.get_gender_display }}</div>
+            </div>
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Ngày sinh</div>
+                <div style="margin-top: 4px;">{{ reader.date_of_birth|date:"d/m/Y" }}</div>
+            </div>
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Điện thoại</div>
+                <div style="margin-top: 4px;">{{ reader.phone }}</div>
+            </div>
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Email</div>
+                <div style="margin-top: 4px; font-size: 13px;">{{ reader.email }}</div>
+            </div>
+            <div style="grid-column: 1 / -1;">
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Địa chỉ</div>
+                <div style="margin-top: 4px; font-size: 14px;">{{ reader.address }}</div>
+            </div>
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Quận/Huyện</div>
+                <div style="margin-top: 4px;">{{ reader.district|default:"—" }}</div>
+            </div>
+            <div>
+                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Chi nhánh ưa thích</div>
+                <div style="margin-top: 4px;">{{ reader.preferred_branch.name|default:"—" }}</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;">Thẻ thư viện</div>
+            <div style="display: flex; gap: 16px;">
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Ngày cấp</div>
+                    <div style="font-weight: 600;">{{ reader.card_issue_date|date:"d/m/Y" }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: var(--text-muted);">Hết hạn</div>
+                    <div style="font-weight: 600; color: {% if reader.is_card_valid %}var(--success){% else %}var(--danger){% endif %};">
+                        {{ reader.card_expiry_date|date:"d/m/Y" }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats & active borrows -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- Stats -->
+        <div class="stats-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="stat-card blue">
+                <div class="stat-icon"><i class="ph ph-books"></i></div>
+                <div class="stat-value">{{ total_borrowed }}</div>
+                <div class="stat-label">Tổng lần mượn</div>
+            </div>
+            <div class="stat-card red">
+                <div class="stat-icon"><i class="ph ph-warning"></i></div>
+                <div class="stat-value">{{ active_borrows.count }}</div>
+                <div class="stat-label">Đang mượn</div>
+            </div>
+        </div>
+
+        <!-- Active borrows -->
+        <div class="card" style="flex: 1;">
+            <div class="card-header">
+                <span class="card-title">📚 Đang mượn</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Sách</th>
+                        <th>Hạn trả</th>
+                        <th>Trạng thái</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for borrow in active_borrows %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'book_detail' borrow.book.pk %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                                {{ borrow.book.title|truncatechars:30 }}
+                            </a>
+                        </td>
+                        <td style="font-size: 13px; {% if borrow.is_overdue %}color: var(--danger); font-weight: 700;{% endif %}">
+                            {{ borrow.due_date|date:"d/m/Y" }}
+                        </td>
+                        <td>
+                            {% if borrow.status == 'overdue' %}
+                                <span class="badge badge-danger">Quá hạn</span>
+                            {% else %}
+                                <span class="badge badge-info">Đang mượn</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'return_book' borrow.pk %}" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12px;">
+                                Trả
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 24px;">Không có sách đang mượn</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Full borrow history -->
+<div class="card">
+    <div class="card-header">
+        <span class="card-title">🕒 Lịch sử mượn/trả</span>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>Sách</th>
+                <th>Chi nhánh</th>
+                <th>Ngày mượn</th>
+                <th>Hạn trả</th>
+                <th>Ngày trả</th>
+                <th>Phí phạt</th>
+                <th>Trạng thái</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for borrow in borrow_records %}
+            <tr>
+                <td>
+                    <a href="{% url 'book_detail' borrow.book.pk %}" style="color: var(--primary); text-decoration: none;">
+                        {{ borrow.book.title|truncatechars:35 }}
+                    </a>
+                </td>
+                <td style="font-size: 13px; color: var(--text-muted);">{{ borrow.branch.name }}</td>
+                <td style="font-size: 13px;">{{ borrow.borrow_date|date:"d/m/Y" }}</td>
+                <td style="font-size: 13px;">{{ borrow.due_date|date:"d/m/Y" }}</td>
+                <td style="font-size: 13px; color: var(--text-muted);">{{ borrow.return_date|date:"d/m/Y"|default:"—" }}</td>
+                <td>
+                    {% if borrow.fine_amount > 0 %}
+                    <span style="color: var(--danger); font-size: 13px; font-weight: 600;">{{ borrow.fine_amount|floatformat:0 }}đ</span>
+                    {% else %}—{% endif %}
+                </td>
+                <td>
+                    {% if borrow.status == 'borrowed' %}<span class="badge badge-info">Đang mượn</span>
+                    {% elif borrow.status == 'returned' %}<span class="badge badge-success">Đã trả</span>
+                    {% elif borrow.status == 'overdue' %}<span class="badge badge-danger">Quá hạn</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Chưa có lịch sử</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,54 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block topbar_actions %}
+<a href="javascript:history.back()" class="btn btn-ghost"><i class="ph ph-arrow-left"></i> Quay lại</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title"><i class="ph ph-pencil-simple" style="color:var(--primary)"></i> {{ title }}</span>
+    </div>
+    <div class="card-body">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="form-grid">
+          {% for field in form %}
+          <div
+            class="form-group {% if 'description' in field.name or 'address' in field.name or 'note' in field.name or 'notes' in field.name %}full{% endif %}">
+            <label class="form-label" for="{{ field.id_for_label }}">
+              {{ field.label }}
+              {% if field.field.required %}
+              <span class="form-req">*</span>
+              {% endif %}
+            </label>
+
+            {{ field }}
+
+            {% if field.help_text %}
+            <div class="form-help">{{ field.help_text }}</div>
+            {% endif %}
+
+            {% for error in field.errors %}
+            <div class="form-error">{{ error }}</div>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="flex-gap mt-20">
+          <button type="submit" class="btn btn-primary">
+            <i class="ph ph-floppy-disk"></i> Lưu đặt trước
+          </button>
+          <a href="{% url 'reservation_list' %}" class="btn btn-ghost">
+            <i class="ph ph-arrow-left"></i> Quay lại
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

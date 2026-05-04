@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile library_app/views.py)",
+      "Bash(python -m py_compile library_app/forms.py)",
+      "Bash(python manage.py check)",
+      "Bash(python manage.py makemigrations2)",
+      "Bash(python manage.py migrate)",
+      "Bash(python -c ' *)",
+      "Bash(python -m py_compile library_app/models.py)",
+      "Bash(python -m py_compile library_app/urls.py)"
+    ]
+  }
+}

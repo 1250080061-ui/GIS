@@ -1,0 +1,295 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Kho sách — LibraryGIS{% endblock %}
+{% block n_book %}active{% endblock %}
+{% block page_title %}Kho sách{% endblock %}
+
+{% block topbar_actions %}
+<a href="{% url 'book_bulk_import' %}" class="btn btn-ghost">
+  <i class="ph ph-download-simple"></i> Nhập hàng loạt
+</a>
+<a href="{% url 'book_create' %}" class="btn btn-primary">
+  <i class="ph ph-plus"></i> Thêm sách mới
+</a>
+{% endblock %}
+
+{% block content %}
+
+<form method="get" class="search-bar">
+  <div class="search-wrap" style="flex:2">
+    <i class="ph ph-magnifying-glass"></i>
+    <input type="text" name="search" value="{{ search }}" placeholder="Tìm tên sách, tác giả, ISBN..."
+      class="form-control">
+  </div>
+  <select name="category" class="form-control" style="max-width:180px">
+    <option value="">Tất cả danh mục</option>
+    {% for cat in categories %}
+    <option value="{{ cat.pk }}" {% if cat_id == cat.pk|stringformat:"s" %}selected{% endif %}>
+      {{ cat.name }}
+    </option>
+    {% endfor %}
+  </select>
+  <label class="flex-gap" style="white-space:nowrap;font-size:13px;color:var(--text2);cursor:pointer">
+    <input type="checkbox" name="available" value="1" {% if request.GET.available %}checked{% endif %}
+      style="accent-color:var(--primary);width:15px;height:15px">
+    Còn sẵn
+  </label>
+  <button type="submit" class="btn btn-primary">
+    <i class="ph ph-funnel"></i> Lọc
+  </button>
+  {% if search or request.GET.category or request.GET.available %}
+  <a href="{% url 'book_list' %}" class="btn btn-ghost">
+    <i class="ph ph-x"></i>
+  </a>
+  {% endif %}
+</form>
+
+<div class="flex-between mb-16">
+  <span class="text-muted text-sm">
+    Tìm thấy <strong style="color:var(--text)">{{ total_count }}</strong> cuốn sách
+  </span>
+</div>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr>
+        <th>ISBN</th>
+        <th>Tên sách</th>
+        <th>Tác giả</th>
+        <th>Danh mục</th>
+        <th>NXB / Năm</th>
+        <th style="text-align:center">Có sẵn</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for book in books %}
+      <tr>
+        <td class="mono text-dim">{{ book.isbn }}</td>
+        <td style="max-width:220px">
+          <div class="book-hover-wrap" style="position:relative;display:flex;align-items:center;gap:10px">
+            {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" alt=""
+              style="width:32px;height:44px;object-fit:cover;border-radius:4px;flex-shrink:0">
+            {% else %}
+            <div style="width:32px;height:44px;background:var(--bg4);border-radius:4px;
+                display:flex;align-items:center;justify-content:center;
+                font-size:16px;flex-shrink:0">📚</div>
+            {% endif %}
+
+            <a href="{% url 'book_detail' book.pk %}" class="text-primary fw-500" style="text-decoration:none">
+              {{ book.title|truncatechars:40 }}
+            </a>
+
+            <div class="book-preview-popup">
+              <div class="preview-title">Xem trước</div>
+
+              <div class="preview-pages">
+                {% if book.preview_page_1 or book.preview_page_2 or book.preview_page_3 or book.preview_page_4 %}
+                {% if book.preview_page_1 %}
+                <img src="{{ book.preview_page_1.url }}" class="preview-thumb zoomable">
+                {% endif %}
+                {% if book.preview_page_2 %}
+                <img src="{{ book.preview_page_2.url }}" class="preview-thumb zoomable">
+                {% endif %}
+                {% if book.preview_page_3 %}
+                <img src="{{ book.preview_page_3.url }}" class="preview-thumb zoomable">
+                {% endif %}
+                {% if book.preview_page_4 %}
+                <img src="{{ book.preview_page_4.url }}" class="preview-thumb zoomable">
+                {% endif %}
+                {% else %}
+                <div class="text-muted text-sm">Chưa có trang xem trước</div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td class="text-muted">{{ book.author }}</td>
+        <td>
+          {% if book.category %}
+          <span class="badge badge-info">{{ book.category.name }}</span>
+          {% else %}<span class="text-dim">—</span>{% endif %}
+        </td>
+        <td class="text-muted text-sm">
+          {{ book.publisher }}<br>{{ book.publish_year }}
+        </td>
+        <td style="text-align:center">
+          {% if book.available_copies > 0 %}
+          <span class="badge badge-success">{{ book.available_copies }}/{{ book.total_copies }}</span>
+          {% else %}
+          <span class="badge badge-danger">Hết / {{ book.total_copies }}</span>
+          {% endif %}
+        </td>
+        <td>
+          <div class="flex-gap">
+            <a href="{% url 'book_edit' book.pk %}" class="btn btn-ghost btn-sm" title="Sửa">
+              <i class="ph ph-pencil"></i>
+            </a>
+            {% if book.available_copies > 0 %}
+            <a href="{% url 'borrow_create' %}?book={{ book.pk }}" class="btn btn-secondary btn-sm"
+              title="Tạo phiếu mượn">
+              <i class="ph ph-arrow-left"></i>
+            </a>
+            {% endif %}
+            <a href="{% url 'book_delete' book.pk %}" class="btn btn-danger btn-sm" title="Xóa">
+              <i class="ph ph-trash"></i>
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <span class="empty-state-icon"><i class="ph ph-books"></i></span>
+            <div class="empty-state-title">Không tìm thấy sách nào</div>
+            <div class="empty-state-sub">
+              Thử thay đổi bộ lọc hoặc
+              <a href="{% url 'book_create' %}" class="text-primary">thêm sách mới</a>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if books.has_other_pages %}
+  <div class="pagination">
+    {% if books.has_previous %}
+    <a href="?page={{ books.previous_page_number }}&search={{ search }}" class="page-link">
+      <i class="ph ph-caret-left"></i>
+    </a>
+    {% endif %}
+    {% for n in books.paginator.page_range %}
+    <a href="?page={{ n }}&search={{ search }}" class="page-link {% if books.number == n %}current{% endif %}">{{ n
+      }}</a>
+    {% endfor %}
+    {% if books.has_next %}
+    <a href="?page={{ books.next_page_number }}&search={{ search }}" class="page-link">
+      <i class="ph ph-caret-right"></i>
+    </a>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+<div id="imgZoomModal" class="img-zoom-modal" onclick="closeZoomModal()">
+  <span class="img-zoom-close">&times;</span>
+  <img id="imgZoomTarget" class="img-zoom-content">
+</div>
+
+<style>
+  .book-preview-popup {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    z-index: 9999;
+    width: 520px;
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 14px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+    padding: 14px;
+  }
+
+  .book-hover-wrap:hover .book-preview-popup {
+    display: block;
+  }
+
+  .preview-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #1f2a44;
+  }
+
+  .preview-pages {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .preview-thumb {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid #e3eaf3;
+    cursor: zoom-in;
+    transition: transform .2s ease;
+    background: #f8fafc;
+  }
+
+  .preview-thumb:hover {
+    transform: scale(1.03);
+  }
+
+  .img-zoom-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    background: rgba(0, 0, 0, .85);
+    justify-content: center;
+    align-items: center;
+  }
+
+  .img-zoom-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .3);
+  }
+
+  .img-zoom-close {
+    position: absolute;
+    top: 20px;
+    right: 28px;
+    color: #fff;
+    font-size: 42px;
+    cursor: pointer;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.zoomable').forEach(img => {
+      img.addEventListener('click', function (e) {
+        e.stopPropagation();
+        document.getElementById('imgZoomTarget').src = this.src;
+        document.getElementById('imgZoomModal').style.display = 'flex';
+      });
+    });
+  });
+
+  function closeZoomModal() {
+    document.getElementById('imgZoomModal').style.display = 'none';
+  }
+</script>
+
+<div class="pagination">
+    <span class="step-links">
+        {% if books.has_previous %}
+            <a href="?page=1&search={{ search }}&category={{ cat_id }}&sort={{ sort }}">First</a>
+            <a href="?page={{ books.previous_page_number }}&search={{ search }}&category={{ cat_id }}&sort={{ sort }}">Previous</a>
+        {% endif %}
+
+        <span class="page-numbers">
+            {% for num in books.paginator.page_range %}
+                {% if books.number == num %}
+                    <span class="current">{{ num }}</span> <!-- Show current page -->
+                {% else %}
+                    <a href="?page={{ num }}&search={{ search }}&category={{ cat_id }}&sort={{ sort }}">{{ num }}</a> <!-- Show page numbers -->
+                {% endif %}
+            {% endfor %}
+        </span>
+
+        {% if books.has_next %}
+            <a href="?page={{ books.next_page_number }}&search={{ search }}&category={{ cat_id }}&sort={{ sort }}">Next</a>
+            <a href="?page={{ books.paginator.num_pages }}&search={{ search }}&category={{ cat_id }}&sort={{ sort }}">Last</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}

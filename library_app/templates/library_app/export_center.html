@@ -1,0 +1,224 @@
+{% extends 'library_app/base.html' %}
+{% block page_title %}Xuất dữ liệu{% endblock %}
+{% block n_export %}active{% endblock %}
+
+{% block content %}
+<div class="card mb-20">
+  <div class="card-head">
+    <span class="card-title"><i class="ph ph-file-arrow-down"></i> Trung tâm xuất dữ liệu</span>
+  </div>
+  <div class="card-body">
+    <div class="flex-gap mb-20">
+      <a href="?type=borrows"
+        class="btn {% if export_type == 'borrows' %}btn-primary{% else %}btn-ghost{% endif %}">Phiếu mượn</a>
+      <a href="?type=readers" class="btn {% if export_type == 'readers' %}btn-primary{% else %}btn-ghost{% endif %}">Độc
+        giả</a>
+      <a href="?type=books" class="btn {% if export_type == 'books' %}btn-primary{% else %}btn-ghost{% endif %}">Kho
+        sách</a>
+    </div>
+    <form method="get" class="card mb-20" style="padding:16px;">
+      <input type="hidden" name="type" value="{{ export_type }}">
+
+      {% if export_type == 'borrows' %}
+      <div class="flex-gap" style="flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width:260px;"
+          placeholder="Tên độc giả / mã thẻ / tên sách">
+
+        <select name="status" class="form-control" style="max-width:180px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="borrowed" {% if status == 'borrowed' %}selected{% endif %}>Đang mượn</option>
+          <option value="returned" {% if status == 'returned' %}selected{% endif %}>Đã trả</option>
+          <option value="overdue" {% if status == 'overdue' %}selected{% endif %}>Quá hạn</option>
+        </select>
+
+        <input type="date" name="from_date" value="{{ from_date }}" class="form-control" style="max-width:180px;">
+        <input type="date" name="to_date" value="{{ to_date }}" class="form-control" style="max-width:180px;">
+
+        <button type="submit" class="btn btn-primary">Lọc</button>
+        <a href="?type=borrows" class="btn btn-ghost">Xóa lọc</a>
+      </div>
+      {% endif %}
+
+      {% if export_type == 'readers' %}
+      <div class="flex-gap" style="flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width:280px;"
+          placeholder="Tên / mã thẻ / email / điện thoại">
+
+        <select name="status" class="form-control" style="max-width:180px;">
+          <option value="">Tất cả trạng thái</option>
+          <option value="active" {% if status == 'active' %}selected{% endif %}>Hoạt động</option>
+          <option value="inactive" {% if status == 'inactive' %}selected{% endif %}>Ngừng</option>
+        </select>
+
+        <button type="submit" class="btn btn-primary">Lọc</button>
+        <a href="?type=readers" class="btn btn-ghost">Xóa lọc</a>
+      </div>
+      {% endif %}
+
+      {% if export_type == 'books' %}
+      <div class="flex-gap" style="flex-wrap:wrap;">
+        <input type="text" name="q" value="{{ q }}" class="form-control" style="max-width:280px;"
+          placeholder="Tên sách / tác giả / ISBN">
+
+        <select name="category" class="form-control" style="max-width:220px;">
+          <option value="">Tất cả danh mục</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if category_id == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}
+          </option>
+          {% endfor %}
+        </select>
+
+        <select name="availability" class="form-control" style="max-width:180px;">
+          <option value="">Tất cả tình trạng</option>
+          <option value="available" {% if availability == 'available' %}selected{% endif %}>Còn sách</option>
+          <option value="out" {% if availability == 'out' %}selected{% endif %}>Hết sách</option>
+        </select>
+
+        <button type="submit" class="btn btn-primary">Lọc</button>
+        <a href="?type=books" class="btn btn-ghost">Xóa lọc</a>
+      </div>
+      {% endif %}
+    </form>
+
+    {% if export_type == 'borrows' %}
+    <div class="flex-between mb-16">
+      <div>
+        <div class="text-muted">Tổng số bản ghi</div>
+        <div class="stat-value">{{ borrow_count }}</div>
+      </div>
+      <a href="{% url 'export_borrows' %}?q={{ q|urlencode }}&status={{ status|urlencode }}&from_date={{ from_date|urlencode }}&to_date={{ to_date|urlencode }}"
+        class="btn btn-primary">
+        <i class="ph ph-download-simple"></i> Tải CSV phiếu mượn
+      </a>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã phiếu</th>
+            <th>Độc giả</th>
+            <th>Sách</th>
+            <th>Ngày mượn</th>
+            <th>Hạn trả</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in borrow_preview %}
+          <tr>
+            <td>{{ b.borrow_code|default:b.id }}</td>
+            <td>{{ b.reader.full_name }}</td>
+            <td>{{ b.book.title }}</td>
+            <td>{{ b.borrow_date|date:"d/m/Y" }}</td>
+            <td>{{ b.due_date|date:"d/m/Y" }}</td>
+            <td>{{ b.status }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted">Không có dữ liệu</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if export_type == 'readers' %}
+    <div class="flex-between mb-16">
+      <div>
+        <div class="text-muted">Tổng số bản ghi</div>
+        <div class="stat-value">{{ reader_count }}</div>
+      </div>
+      <a href="{% url 'export_readers' %}?q={{ q|urlencode }}&status={{ status|urlencode }}" class="btn btn-primary">
+        <i class="ph ph-download-simple"></i> Tải CSV độc giả
+      </a>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã thẻ</th>
+            <th>Họ tên</th>
+            <th>Điện thoại</th>
+            <th>Email</th>
+            <th>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in reader_preview %}
+          <tr>
+            <td>{{ r.card_number }}</td>
+            <td>{{ r.full_name }}</td>
+            <td>{{ r.phone }}</td>
+            <td>{{ r.email }}</td>
+            <td>{{ r.status }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">Không có dữ liệu</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if export_type == 'books' %}
+    <div class="flex-between mb-16">
+      <div>
+        <div class="text-muted">Tổng số bản ghi</div>
+        <div class="stat-value">{{ book_count }}</div>
+      </div>
+      <a href="{% url 'export_books' %}?q={{ q|urlencode }}&category={{ category_id|urlencode }}&availability={{ availability|urlencode }}"
+        class="btn btn-primary">
+        <i class="ph ph-download-simple"></i> Tải CSV kho sách
+      </a>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ISBN</th>
+            <th>Tên sách</th>
+            <th>Tác giả</th>
+            <th>Danh mục</th>
+            <th>Có sẵn</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in book_preview %}
+          <tr>
+            <td>{{ b.isbn }}</td>
+            <td>{{ b.title }}</td>
+            <td>{{ b.author }}</td>
+            <td>{% if b.category %}{{ b.category.name }}{% else %}-{% endif %}</td>
+            <td>{{ b.available_copies }}/{{ b.total_copies }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted">Không có dữ liệu</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Hiển thị các liên kết phân trang -->
+{% if page.has_previous %}
+    <a href="?page=1">Đầu tiên</a>
+    <a href="?page={{ page.previous_page_number }}">Trước</a>
+{% endif %}
+
+<span>Trang {{ page.number }} trong tổng số {{ page.paginator.num_pages }}.</span>
+
+{% if page.has_next %}
+    <a href="?page={{ page.next_page_number }}">Tiếp theo</a>
+    <a href="?page={{ page.paginator.num_pages }}">Cuối cùng</a>
+{% endif %}
+{% endblock %}

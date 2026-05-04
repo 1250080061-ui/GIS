@@ -1,0 +1,85 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Mượn/Trả — LibraryGIS{% endblock %}
+{% block n_borrow %}active{% endblock %}
+{% block page_title %}Quản lý mượn / trả sách{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'borrow_create' %}" class="btn btn-primary"><i class="ph ph-plus"></i> Tạo phiếu mượn</a>
+{% endblock %}
+
+{% block content %}
+{% if overdue_count > 0 %}
+<div class="alert alert-error mb-20">
+  <i class="ph ph-warning-circle"></i>
+  Có <strong>{{ overdue_count }}</strong> phiếu đang quá hạn trả!&nbsp;
+  <a href="?status=overdue" style="color:inherit;font-weight:600;text-decoration:underline">Xem ngay →</a>
+</div>
+{% endif %}
+
+<div class="tabs">
+  <a href="{% url 'borrow_list' %}" class="tab {% if not status_filter %}active{% endif %}">Tất cả <span class="badge badge-muted" style="margin-left:4px">{{ total_count }}</span></a>
+  <a href="?status=borrowed" class="tab {% if status_filter == 'borrowed' %}active{% endif %}">Đang mượn</a>
+  <a href="?status=overdue" class="tab {% if status_filter == 'overdue' %}active{% endif %}">Quá hạn {% if overdue_count > 0 %}<span class="badge badge-danger" style="margin-left:4px">{{ overdue_count }}</span>{% endif %}</a>
+  <a href="?status=returned" class="tab {% if status_filter == 'returned' %}active{% endif %}">Đã trả</a>
+</div>
+
+<form method="get" class="search-bar">
+  <input type="hidden" name="status" value="{{ status_filter }}">
+  <div class="search-wrap">
+    <i class="ph ph-magnifying-glass"></i>
+    <input type="text" name="search" value="{{ search }}" placeholder="Tên độc giả, tên sách, mã thẻ..." class="form-control">
+  </div>
+  <select name="branch" class="form-control" style="max-width:170px">
+    <option value="">Tất cả chi nhánh</option>
+    {% for b in branches %}<option value="{{ b.pk }}" {% if request.GET.branch == b.pk|stringformat:'s' %}selected{% endif %}>{{ b.name }}</option>{% endfor %}
+  </select>
+  <input type="date" name="date_from" value="{{ request.GET.date_from }}" class="form-control" style="max-width:150px" title="Từ ngày">
+  <input type="date" name="date_to" value="{{ request.GET.date_to }}" class="form-control" style="max-width:150px" title="Đến ngày">
+  <button type="submit" class="btn btn-primary"><i class="ph ph-funnel"></i> Lọc</button>
+</form>
+
+<div class="card">
+  <table>
+    <thead>
+      <tr><th>Mã phiếu</th><th>Độc giả</th><th>Sách</th><th>Chi nhánh</th><th>Ngày mượn</th><th>Hạn trả</th><th>Ngày trả</th><th>Phí phạt</th><th>Trạng thái</th><th>Thao tác</th></tr>
+    </thead>
+    <tbody>
+      {% for borrow in borrows %}
+      <tr>
+        <td class="mono text-dim text-xs">{{ borrow.borrow_code|stringformat:'s'|slice:':8'|upper }}</td>
+        <td>
+          <a href="{% url 'reader_detail' borrow.reader.pk %}" style="color:var(--text);text-decoration:none;font-weight:500">{{ borrow.reader.full_name }}</a>
+          <div class="mono text-dim text-xs">{{ borrow.reader.card_number }}</div>
+        </td>
+        <td><a href="{% url 'book_detail' borrow.book.pk %}" class="text-primary" style="text-decoration:none">{{ borrow.book.title|truncatechars:30 }}</a></td>
+        <td class="text-muted text-sm">—</td>
+        <td class="mono text-sm">{{ borrow.borrow_date|date:"d/m/Y" }}</td>
+        <td class="mono text-sm {% if borrow.status == 'overdue' %}text-danger fw-500{% endif %}">{{ borrow.due_date|date:"d/m/Y" }}</td>
+        <td class="mono text-muted text-sm">{{ borrow.return_date|date:"d/m/Y"|default:"—" }}</td>
+        <td>{% if borrow.fine_amount > 0 %}<span class="text-danger fw-500 text-sm">{{ borrow.fine_amount|floatformat:0 }}đ</span>{% else %}<span class="text-dim">—</span>{% endif %}</td>
+        <td>
+          {% if borrow.status == 'borrowed' %}<span class="badge badge-info">Đang mượn</span>
+          {% elif borrow.status == 'returned' %}<span class="badge badge-success">Đã trả</span>
+          {% elif borrow.status == 'overdue' %}<span class="badge badge-danger">Quá hạn</span>
+          {% else %}<span class="badge badge-muted">{{ borrow.status }}</span>{% endif %}
+        </td>
+        <td>
+          {% if borrow.status == 'borrowed' or borrow.status == 'overdue' %}
+          <a href="{% url 'return_book' borrow.pk %}" class="btn btn-sm btn-secondary"><i class="ph ph-arrow-up"></i> Trả</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="10"><div class="empty-state"><span class="empty-state-icon">📋</span><div class="empty-state-title">Không có phiếu mượn nào</div></div></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if borrows.has_other_pages %}
+  <div class="pagination">
+    {% if borrows.has_previous %}<a href="?page={{ borrows.previous_page_number }}&status={{ status_filter }}" class="page-link"><i class="ph ph-caret-left"></i></a>{% endif %}
+    {% for n in borrows.paginator.page_range %}<a href="?page={{ n }}&status={{ status_filter }}" class="page-link {% if borrows.number == n %}current{% endif %}">{{ n }}</a>{% endfor %}
+    {% if borrows.has_next %}<a href="?page={{ borrows.next_page_number }}&status={{ status_filter }}" class="page-link"><i class="ph ph-caret-right"></i></a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}

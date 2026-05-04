@@ -1,0 +1,75 @@
+{% extends 'library_app/base.html' %}
+{% block title %}Đặt trước sách · LibraryGIS{% endblock %}
+{% block n_reservation %}active{% endblock %}
+{% block page_title %}Đặt trước sách{% endblock %}
+{% block topbar_actions %}
+<a href="{% url 'reservation_create' %}" class="btn btn-primary"><i class="ph ph-plus"></i> Đặt trước mới</a>
+{% endblock %}
+
+{% block content %}
+<div class="search-bar">
+  <a href="?" class="btn {% if not status_filter %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Tất cả</a>
+  <a href="?status=pending" class="btn {% if status_filter == 'pending' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Chờ sách</a>
+  <a href="?status=ready" class="btn {% if status_filter == 'ready' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Sẵn sàng</a>
+  <a href="?status=fulfilled" class="btn {% if status_filter == 'fulfilled' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Hoàn thành</a>
+  <a href="?status=cancelled" class="btn {% if status_filter == 'cancelled' %}btn-primary{% else %}btn-ghost{% endif %} btn-sm">Đã hủy</a>
+</div>
+
+<div class="card">
+  <table>
+    <thead><tr><th>Độc giả</th><th>Sách</th><th>Chi nhánh</th><th>Ngày đặt</th><th>Hết hạn</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      {% for r in reservations %}
+      <tr>
+        <td>
+          <a href="{% url 'reader_detail' r.reader.pk %}" style="color:var(--text);text-decoration:none;font-weight:500">{{ r.reader.full_name }}</a>
+          <div class="mono text-dim">{{ r.reader.card_number }}</div>
+        </td>
+        <td>
+          <a href="{% url 'book_detail' r.book.pk %}" class="text-gold" style="text-decoration:none">{{ r.book.title|truncatechars:35 }}</a>
+        </td>
+        <td class="text-muted">{{ r.branch.name }}</td>
+        <td class="mono text-muted">{{ r.reserved_at|date:"d/m/Y" }}</td>
+        <td class="mono">{{ r.expires_at|date:"d/m/Y" }}</td>
+        <td>
+          {% if r.status == 'pending' %}<span class="badge badge-warn">Chờ sách</span>
+          {% elif r.status == 'ready' %}<span class="badge badge-info">Sẵn sàng</span>
+          {% elif r.status == 'fulfilled' %}<span class="badge badge-success">Hoàn thành</span>
+          {% else %}<span class="badge badge-muted">Đã hủy</span>{% endif %}
+        </td>
+        <td class="text-muted">{{ r.note|truncatechars:30|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" style="text-align:center;padding:60px" class="text-dim">
+        <i class="ph ph-bookmark" style="font-size:40px;opacity:.3;display:block;margin-bottom:10px"></i>
+        Không có đặt trước nào
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if reservations.has_other_pages %}
+  <div class="pagination">
+    {% if reservations.has_previous %}<a href="?page={{ reservations.previous_page_number }}" class="page-link"><i class="ph ph-caret-left"></i></a>{% endif %}
+    {% for n in reservations.paginator.page_range %}<a href="?page={{ n }}" class="page-link {% if reservations.number == n %}current{% endif %}">{{ n }}</a>{% endfor %}
+    {% if reservations.has_next %}<a href="?page={{ reservations.next_page_number }}" class="page-link"><i class="ph ph-caret-right"></i></a>{% endif %}
+  </div>
+  {% endif %}
+</div>
+<div class="pagination">
+    <span class="step-links">
+        {% if reservations.has_previous %}
+            <a href="?page=1&status={{ status_filter }}">First</a>
+            <a href="?page={{ reservations.previous_page_number }}&status={{ status_filter }}">Previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ reservations.number }} of {{ reservations.paginator.num_pages }}.
+        </span>
+
+        {% if reservations.has_next %}
+            <a href="?page={{ reservations.next_page_number }}&status={{ status_filter }}">Next</a>
+            <a href="?page={{ reservations.paginator.num_pages }}&status={{ status_filter }}">Last</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}
